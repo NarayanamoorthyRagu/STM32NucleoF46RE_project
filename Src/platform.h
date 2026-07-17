@@ -19,6 +19,7 @@
 #define SYSCFG_BASE       0x40013800UL  //System configure base
 #define EXTI_BASE         0x40013C00UL  //External interrupt base
 #define ADC_BASE          0x40012000UL
+#define DMA2_BASE         0x40026400UL
 
 #define AHB1ENR_OFFSET    0x30
 #define APB1ENR_OFFSET    0x40
@@ -59,6 +60,18 @@
 #define ADC_SQR1_OFFSET   0x2C
 #define ADC_SR_OFFSET     0x00
 #define ADC_DR_OFFSET     0x4C
+#define ADC_CCR_OFFSET    0x04
+#define ADC_SMPR2_OFFSET   0x10
+
+#define DMA_LISR_OFFSET  0X00
+#define DMA_HISR_OFFSET  0x04
+#define DMA_LIFCR_OFFSET 0x08
+#define DMA_HIFCR_OFFSET 0x0C
+#define DMA_S0CR_OFFSET   (0x10 + (0x18 * 0))
+#define DMA_S0NDTR_OFFSET (0x14 + (0x18 * 0))
+#define DMA_S0PAR_OFFSET  (0x18 + (0x18 * 0))
+#define DMA_S0M0AR_OFFSET (0x1C + (0x18 * 0))
+#define DMA_S0FCR_OFFSET  (0x24 + (0x24 * 0))
 
 #define RCC_AHB1ENR       (*(volatile uint32_t *)(RCC_BASE   + AHB1ENR_OFFSET))
 #define RCC_APB1ENR       (*(volatile uint32_t *)(RCC_BASE   + APB1ENR_OFFSET))
@@ -108,7 +121,18 @@
 #define ADC_SQR1		  (*(volatile uint32_t *)(ADC_BASE + ADC_SQR1_OFFSET))
 #define ADC_SR   		  (*(volatile uint32_t *)(ADC_BASE + ADC_SR_OFFSET))
 #define ADC_DR   		  (*(volatile uint32_t *)(ADC_BASE + ADC_DR_OFFSET))
+#define ADC_CCR   		  (*(volatile uint32_t *)(ADC_BASE + ADC_CCR_OFFSET))
+#define ADC_SMPR2   	  (*(volatile uint32_t *)(ADC_BASE + ADC_SMPR2_OFFSET))
 
+#define DMA2_LISR		  (*(volatile uint32_t *)(DMA2_BASE + DMA_LISR_OFFSET))
+#define DMA2_HISR  		  (*(volatile uint32_t *)(DMA2_BASE + DMA_HISR_OFFSET))
+#define DMA2_LIFCR        (*(volatile uint32_t *)(DMA2_BASE + DMA_LIFCR_OFFSET))
+#define DMA2_HIFCR        (*(volatile uint32_t *)(DMA2_BASE + DMA_HIFCR_OFFSET))
+#define DMA2_S0CR         (*(volatile uint32_t *)(DMA2_BASE + DMA_S0CR_OFFSET))
+#define DMA2_S0NDTR       (*(volatile uint32_t *)(DMA2_BASE + DMA_S0NDTR_OFFSET))
+#define DMA2_S0PAR        (*(volatile uint32_t *)(DMA2_BASE + DMA_S0PAR_OFFSET))
+#define DMA2_S0M0AR       (*(volatile uint32_t *)(DMA2_BASE + DMA_S0M0AR_OFFSET))
+#define DMA2_S0FCR		  (*(volatile uint32_t *)(DMA2_BASE + DMA_S0FCR_OFFSET))
 
 #define NVIC_ISER0  	  (*(volatile uint32_t *)0xE000E100)
 #define NVIC_ISER1  	  (*(volatile uint32_t *)0xE000E104)
