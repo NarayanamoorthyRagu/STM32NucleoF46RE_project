@@ -46,7 +46,7 @@ int main(void)
 	gpiob_pwm_init(0);
 
 	//tim2_interrupt(1000);
-	usart2_rx_interrupt();
+	//usart2_rx_interrupt();
 	//exti13_init();
 	//adc_interrupt();
 	//uint8_t prev_status = 1;
