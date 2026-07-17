@@ -41,7 +41,7 @@
 #define TIM_CCMR2_OFFSET  0x1C
 #define TIM_CCR3_OFFSET   0x3C
 
-#define SYSCFG_EXTICR4_OFFSET   0x14
+#define SYSCFG_EXTICR4_OFFSET   0x14 //System configure base for external interrupt
 
 #define EXTI_IMR_OFFSET   0x00
 #define EXTI_FTSR_OFFSET  0x0C
