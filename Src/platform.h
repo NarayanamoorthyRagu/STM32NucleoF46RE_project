@@ -113,8 +113,9 @@
 #define NVIC_ISER0  	  (*(volatile uint32_t *)0xE000E100)
 #define NVIC_ISER1  	  (*(volatile uint32_t *)0xE000E104)
 
-#define TIMER_CLK_HZ      16000000U   // TIM2 input clock (16 MHz)
-#define TIMER_TICK_HZ     1000U       // 1 ms timer tick
+#define TIMER_CLK_HZ            16000000U      // TIM2 input clock (16 MHz)
+#define TIMER_TICK_MS_DELAY     1000U          // 1 ms timer tick
+#define TIMER_TICK_US_PWM       1000000U       // 1 us timer tick
 
 #define INPUT   0
 #define OUTPUT  1

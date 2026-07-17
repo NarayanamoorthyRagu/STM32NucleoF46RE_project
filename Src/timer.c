@@ -16,7 +16,8 @@ void tim2_init(void)
 
 	TIM2_CR1 	&= ~(1U << 0); // stop the timer
 
-	TIM2_PSC =  (TIMER_CLK_HZ / TIMER_TICK_HZ) - 1U;
+	TIM2_PSC =  (TIMER_CLK_HZ / TIMER_TICK_MS_DELAY) - 1U; // Set prescalar for 1ms because timer needs atleast 1ms
+
 
 }
 

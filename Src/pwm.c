@@ -20,23 +20,23 @@ void gpiob_pwm_init(uint8_t pin)
 
 	GPIOB_AFRL  &= ~(0xFU << (pin*4)); //reset the PA1(0000) AFRL register values
 
-	GPIOB_AFRL  |=  (0x2U << (pin*4)); //set the PA1(0001)  for AF2 because datasheet says AF2 as TIMER2
+	GPIOB_AFRL  |=  (0x2U << (pin*4)); //set the PA1(0001)  for AF2 because datasheet says AF2 as TIMER3
 
-	TIM3_PSC = 15;
+	TIM3_PSC = (TIMER_CLK_HZ / TIMER_TICK_US_PWM) - 1U; // Set prescalar for 1us because pwm need less delay
 
-	TIM3_ARR = 999;
+	TIM3_ARR = 999; //Reload after 1ms .so we set 999 auto reload register
 
-	TIM3_CCMR2 &= ~((7U << 4) | (1U << 3));
+	TIM3_CCMR2  &= ~((7U << 4) | (1U << 3)); //  reset the OC3M and OC3PE bits
 
-	TIM3_CCMR2 |=  ((6U << 4) | (1U << 3));
+	TIM3_CCMR2  |=  ((6U << 4) | (1U << 3)); //  set 110 for OC3M because pwm mode1 is 110 and Output compare 3 preload enable
 
-	TIM3_CCER   |=  (1U << 8);
+	TIM3_CCER   |=  (1U << 8); //  Capture/Compare 3 output enable
 
-	TIM3_EGR    =   (1U << 0);
+	TIM3_EGR    =   (1U << 0); //  force to set the prescalar and arr values
 
-	TIM3_CR1    |=  (1U << 0);
+	TIM3_CR1    |=  (1U << 0); //Enable counter in control register1
 
-	TIM3_CCR3 = 0;    // LED OFF initially
+	TIM3_CCR3   = 0;    // LED OFF initially
 
 }
 
@@ -47,6 +47,6 @@ void gpiob_pwm_write(uint8_t pin, uint32_t value)
         value = 999;
     }
 
-    TIM3_CCR3 = value;
+    TIM3_CCR3 = value; // value must be (0 to 1000)
 }
 
