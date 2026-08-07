@@ -42,7 +42,7 @@ void EXTI15_10_IRQHandler(void)
         /* Clear pending flag */
         EXTI_PR |= (1 << 13);
 
-        //led(led_status);
+        gpioa_toggle(5);
 
         if (led_status)
 

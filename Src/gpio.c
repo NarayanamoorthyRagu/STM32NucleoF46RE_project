@@ -12,11 +12,20 @@
 
 void gpioa_init(uint8_t pin,uint8_t mode)
 {
-    RCC_AHB1ENR |=  (1<<0);  //Enable clock for GPIOA
+    RCC_AHB1ENR   |=  (1U    <<  0);      //Enable clock for GPIOA
 
-    GPIOA_MODER &= ~(3    << (pin*2)); //Reset the bits for respective pin in MODER(00)
+    GPIOA_MODER   &= ~(3U    << (pin*2)); //Reset the bits for respective pin in MODER(00)
 
-    GPIOA_MODER |=  (mode << (pin*2)); //Make respective pin as output in MODER(01)
+    GPIOA_MODER   |=  (mode << (pin*2)); //Make respective pin as output in MODER(01)
+
+    GPIOA_OSPEEDR &= ~(3U    << (pin*2));
+
+    GPIOA_LCKR = (1U << pin) | (1U << 16);   // Step 1
+	GPIOA_LCKR = (1U << pin);                // Step 2
+	GPIOA_LCKR = (1U << pin) | (1U << 16);   // Step 3.p
+
+	(void)GPIOA_LCKR;                        // Step 4: Read
+	(void)GPIOA_LCKR;                        // Step 5: Read again
 }
 
 void gpioc_init(uint8_t pin,uint8_t mode)
@@ -39,15 +48,7 @@ void gpioa_toggle(uint8_t pin)
 
 void gpioa_digitalWrite(uint8_t pin,uint8_t operation)
 {
-	if(operation == 1){
-
-	  GPIOA_ODR |=  (1 << pin);
-	}
-
-	else if(operation == 0){
-
-		GPIOA_ODR &= ~(1 << pin);
-	}
+	(operation == 1) ? (GPIOA_BSRR |= (1 << pin)) : (GPIOA_BSRR |= (1 << (pin+16)));
 }
 
 uint8_t gpioc_digitalRead(uint8_t pin)

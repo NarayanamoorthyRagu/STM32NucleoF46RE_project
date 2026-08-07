@@ -25,28 +25,35 @@
 #define APB1ENR_OFFSET    0x40
 #define APB2ENR_OFFSET    0x44
 
-#define GPIO_MODER_OFFSET 0x00
-#define GPIO_ODR_OFFSET   0x14
-#define GPIO_IDR_OFFSET   0x10
-#define GPIO_PUPDR_OFFSET 0x0C
-#define GPIO_AFRL_OFFSET  0x20
+#define GPIO_MODER_OFFSET    0x00
+#define GPIO_OSPEEDR_OFFSET  0x08
+#define GPIO_PUPDR_OFFSET    0x0C
+#define GPIO_IDR_OFFSET      0x10
+#define GPIO_ODR_OFFSET      0x14
+#define GPIO_BSRR_OFFSET     0x18
+#define GPIO_LCKR_OFFSET     0x1C
+#define GPIO_AFRL_OFFSET     0x20
 
 #define TIM_CR1_OFFSET 	  0x00
+#define TIM_DIER_OFFSET   0x0C
 #define TIM_SR_OFFSET 	  0x10
 #define TIM_EGR_OFFSET 	  0x14
+#define TIM_CCMR2_OFFSET  0x1C
+#define TIM_CCER_OFFSET   0x20
 #define TIM_CNT_OFFSET 	  0x24
 #define TIM_PSC_OFFSET    0x28
 #define TIM_ARR_OFFSET    0x2C
-#define TIM_DIER_OFFSET   0x0C
-#define TIM_CCER_OFFSET   0x20
-#define TIM_CCMR2_OFFSET  0x1C
 #define TIM_CCR3_OFFSET   0x3C
 
+#define SYSCFG_EXTICR1_OFFSET   0x08
+#define SYSCFG_EXTICR2_OFFSET   0x0C
+#define SYSCFG_EXTICR3_OFFSET   0x10
 #define SYSCFG_EXTICR4_OFFSET   0x14
 
 #define EXTI_IMR_OFFSET   0x00
-#define EXTI_FTSR_OFFSET  0x0C
+#define EXTI_EMR_OFFSET   0x04
 #define EXTI_RTSR_OFFSET  0x08
+#define EXTI_FTSR_OFFSET  0x0C
 #define EXTI_PR_OFFSET    0x14
 
 #define USART_SR		  0x00
@@ -54,14 +61,15 @@
 #define USART_BRR 		  0x08
 #define USART_CR1         0x0C
 
-#define ADC_CR1_OFFSET	  0x04
-#define ADC_CR2_OFFSET	  0x08
-#define ADC_SQR3_OFFSET   0x34
-#define ADC_SQR1_OFFSET   0x2C
 #define ADC_SR_OFFSET     0x00
+#define ADC_CR1_OFFSET	  0x04
+#define ADC_CCR_OFFSET    ADC_CR1_OFFSET
+#define ADC_CR2_OFFSET	  0x08
+#define ADC_SMPR1_OFFSET  0x0C
+#define ADC_SMPR2_OFFSET  0x10
+#define ADC_SQR1_OFFSET   0x2C
+#define ADC_SQR3_OFFSET   0x34
 #define ADC_DR_OFFSET     0x4C
-#define ADC_CCR_OFFSET    0x04
-#define ADC_SMPR2_OFFSET   0x10
 
 #define DMA_LISR_OFFSET  0X00
 #define DMA_HISR_OFFSET  0x04
@@ -81,7 +89,10 @@
 #define GPIOC_MODER       (*(volatile uint32_t *)(GPIOC_BASE + GPIO_MODER_OFFSET))
 #define GPIOC_IDR         (*(volatile uint32_t *)(GPIOC_BASE + GPIO_IDR_OFFSET))
 #define GPIOC_PUPDR       (*(volatile uint32_t *)(GPIOC_BASE + GPIO_PUPDR_OFFSET))
+#define GPIOA_OSPEEDR     (*(volatile uint32_t *)(GPIOA_BASE + GPIO_OSPEEDR_OFFSET))
+#define GPIOA_LCKR        (*(volatile uint32_t *)(GPIOA_BASE + GPIO_LCKR_OFFSET))
 #define GPIOA_ODR         (*(volatile uint32_t *)(GPIOA_BASE + GPIO_ODR_OFFSET))
+#define GPIOA_BSRR	      (*(volatile uint32_t *)(GPIOA_BASE + GPIO_BSRR_OFFSET))
 #define GPIOA_AFRL        (*(volatile uint32_t *)(GPIOA_BASE + GPIO_AFRL_OFFSET))
 
 #define GPIOB_MODER       (*(volatile uint32_t *)(GPIOB_BASE + GPIO_MODER_OFFSET))
@@ -108,9 +119,13 @@
 #define USART2_SR 		  (*(volatile uint32_t *)(USART2_BASE + USART_SR))
 #define USART2_DR 		  (*(volatile uint32_t *)(USART2_BASE + USART_DR))
 
+#define SYSCFG_EXTICR1 	  (*(volatile uint32_t *)(SYSCFG_BASE + SYSCFG_EXTICR1_OFFSET))
+#define SYSCFG_EXTICR2 	  (*(volatile uint32_t *)(SYSCFG_BASE + SYSCFG_EXTICR2_OFFSET))
+#define SYSCFG_EXTICR3 	  (*(volatile uint32_t *)(SYSCFG_BASE + SYSCFG_EXTICR3_OFFSET))
 #define SYSCFG_EXTICR4 	  (*(volatile uint32_t *)(SYSCFG_BASE + SYSCFG_EXTICR4_OFFSET))
 
 #define EXTI_IMR    	  (*(volatile uint32_t *)(EXTI_BASE + EXTI_IMR_OFFSET))
+#define EXTI_EMR    	  (*(volatile uint32_t *)(EXTI_BASE + EXTI_EMR_OFFSET))
 #define EXTI_FTSR         (*(volatile uint32_t *)(EXTI_BASE + EXTI_FTSR_OFFSET))
 #define EXTI_RTSR         (*(volatile uint32_t *)(EXTI_BASE + EXTI_RTSR_OFFSET))
 #define EXTI_PR           (*(volatile uint32_t *)(EXTI_BASE + EXTI_PR_OFFSET))
@@ -121,7 +136,8 @@
 #define ADC_SQR1		  (*(volatile uint32_t *)(ADC_BASE + ADC_SQR1_OFFSET))
 #define ADC_SR   		  (*(volatile uint32_t *)(ADC_BASE + ADC_SR_OFFSET))
 #define ADC_DR   		  (*(volatile uint32_t *)(ADC_BASE + ADC_DR_OFFSET))
-#define ADC_CCR   		  (*(volatile uint32_t *)(ADC_BASE + ADC_CCR_OFFSET))
+#define ADC_CCR   		  (*(volatile uint32_t *)(ADC_BASE + 0x300 + ADC_CCR_OFFSET))
+#define ADC_SMPR1         (*(volatile uint32_t *)(ADC_BASE + ADC_SMPR1_OFFSET))
 #define ADC_SMPR2   	  (*(volatile uint32_t *)(ADC_BASE + ADC_SMPR2_OFFSET))
 
 #define DMA2_LISR		  (*(volatile uint32_t *)(DMA2_BASE + DMA_LISR_OFFSET))
@@ -153,5 +169,6 @@ extern char buffer[RX_BUFFER_SIZE];
 
 extern uint32_t count;
 extern uint32_t PWM_val;
+extern uint32_t seconds;
 
 #endif /* PLATFORM_H_ */

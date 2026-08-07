@@ -13,6 +13,8 @@
 #include "uart.h"
 
 void gpioa_adc_init(uint8_t);
+void adc_temp_sensor_init(void);
+uint16_t adc_temp_read(void);
 uint16_t adc_read(void);
 void adc_interrupt(void);
 #endif /* ADC_H_ */

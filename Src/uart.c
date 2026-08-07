@@ -239,12 +239,17 @@ void USART2_IRQHandler(void){
 
 //  Receive int value using uart interrupt and work pwm
 
-	if(USART2_SR & (1U << 5)){
-		PWM_val = usart2_rx_uint();
-		usart2_tx_str("Received: ");
-		usart2_tx_uint(PWM_val);
-		gpiob_pwm_write(0, PWM_val);
-	}
+//	if(USART2_SR & (1U << 5)){
+//
+//		PWM_val = usart2_rx_uint();
+//
+//		usart2_tx_str("Received: ");
+//
+//		usart2_tx_uint(PWM_val);
+//
+//		gpiob_pwm_write(0, PWM_val);
+//
+//	}
 
 }
 

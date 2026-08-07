@@ -23,7 +23,7 @@ void dma2_stream0_init(void){
 
 	DMA2_S0PAR   =   (uint32_t)&ADC_DR;
 
-	DMA2_S0M0AR  =   (uint32_t)adc_buffer;
+	//DMA2_S0M0AR  =   (uint32_t)adc_buffer;
 
 	DMA2_S0NDTR = 1;
 

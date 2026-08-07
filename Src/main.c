@@ -62,12 +62,12 @@ int main(void)
 
 		//Pin enable and disable
 
-//		gpioa_digitalWrite(5, HIGH);
+		gpioa_digitalWrite(5, HIGH);
 //		gpioa_digitalWrite(6, HIGH);
-//		tim2_delay(1000);
-//		gpioa_digitalWrite(5, LOW);
+		tim2_delay(1000);
+		gpioa_digitalWrite(5, LOW);
 //		gpioa_digitalWrite(6, LOW);
-//		tim2_delay(1000);
+		tim2_delay(1000);
 
 		//Read input pin
 
