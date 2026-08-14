@@ -20,6 +20,7 @@
 #include "gpio.h"
 #include "timer.h"
 #include "uart.h"
+#include "ec200u.h"
 #include "exti.h"
 #include "adc.h"
 #include "pwm.h"
@@ -31,7 +32,7 @@ uint32_t count=0;
 
 uint8_t prev_status = 0;
 
-uint8_t led_status = 0;
+uint8_t led_status = 1;
 
 uint32_t PWM_val = 0;
 
@@ -42,8 +43,9 @@ int main(void)
 	gpioc_init(13,INPUT);
 	gpioa_adc_init(0);
 	tim2_init();
-	usart2_init(9600);
-	gpiob_pwm_init(0);
+	usart1_init(115200);
+	usart2_init(115200);
+	//gpiob_pwm_init(0);
 
 	//tim2_interrupt(1000);
 	//usart2_rx_interrupt();
@@ -51,83 +53,241 @@ int main(void)
 	//adc_interrupt();
 	//uint8_t prev_status = 1;
 	//uint8_t led_status = 1;
+	tim2_delay(2000);
+	char imei[128];
+	char operator_name[128];
+	uint8_t signal;
+	char iccid[32];
+	//char network[128];
+	char version[128];
+	char ip_addr[32];
+
+	if(ec200u_check_module(&USART1_SR, &USART1_DR))
+	{
+	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM OK\r\n");
+	    tim2_delay(2000);
+	}
+	else
+	{
+	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM FAIL\r\n");
+	}
+
+	if(ec200u_check_sim(&USART1_SR, &USART1_DR))
+	{
+	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSIM OK\r\n");
+	    tim2_delay(2000);
+	}
+	else
+	{
+	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSIM FAIL\r\n");
+	}
+
+	if(ec200u_check_network(&USART1_SR, &USART1_DR))
+	{
+	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nNETWORK OK\r\n");
+	    tim2_delay(2000);
+	}
+	else
+	{
+	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nNETWORK FAIL\r\n");
+	}
+
+	if(ec200u_get_imei(&USART1_SR, &USART1_DR, imei))
+	{
+		usart_tx_str(&USART2_SR,&USART2_DR,"\r\nIMEI: ");
+		usart_tx_str(&USART2_SR,&USART2_DR,imei);
+		tim2_delay(2000);
+	}
+
+	if(ec200u_get_operator(&USART1_SR, &USART1_DR, operator_name))
+	{
+		usart_tx_str(&USART2_SR,&USART2_DR,"\r\nOperator: ");
+		usart_tx_str(&USART2_SR,&USART2_DR,operator_name);
+		tim2_delay(2000);
+	}
+
+	if(ec200u_get_signal(&USART1_SR,&USART1_DR,&signal))
+	{
+	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nSignal: ");
+	    usart_tx_uint(&USART2_SR,&USART2_DR,signal);
+	    tim2_delay(2000);
+	}
+
+	if(ec200u_get_iccid(&USART1_SR,&USART1_DR,iccid))
+	{
+	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nICCID: ");
+	    usart_tx_str(&USART2_SR,&USART2_DR,iccid);
+	    tim2_delay(2000);
+	}
+
+//	if(ec200u_get_network_info(&USART1_SR,&USART1_DR,network))
+//	{
+//	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nNetwork Info: ");
+//	    usart_tx_str(&USART2_SR,&USART2_DR,network);
+//	}
+//	else
+//	{
+//	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nNetwork Info FAIL\r\n");
+//	}
+
+	if(ec200u_get_firmware(&USART1_SR,&USART1_DR,version))
+	{
+	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nFirmware: ");
+	    usart_tx_str(&USART2_SR,&USART2_DR,version);
+	    tim2_delay(2000);
+	}
+	else
+	{
+	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nFirmware FAIL\r\n");
+	}
+
+	if(ec200u_set_apn(&USART1_SR,&USART1_DR,"jionet"))
+	{
+	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nAPN OK\r\n");
+	    tim2_delay(2000);
+	}
+
+	if(ec200u_activate_pdp(&USART1_SR,&USART1_DR))
+	{
+		usart_tx_str(&USART2_SR,&USART2_DR,"\r\nPDP activated\r\n");
+		tim2_delay(2000);
+	}
+
+	if(ec200u_get_ip(&USART1_SR,&USART1_DR,ip_addr))
+	{
+		usart_tx_str(&USART2_SR,&USART2_DR,"\r\nIp address: ");
+		usart_tx_str(&USART2_SR,&USART2_DR,ip_addr);
+		tim2_delay(2000);
+	}
+
+	if(ec200u_set_mqtt_version(&USART1_SR,&USART1_DR))
+	{
+		usart_tx_str(&USART2_SR,&USART2_DR,"\r\nVersion Set\r\n");
+		tim2_delay(2000);
+	}
+
+	if(ec200u_mqtt_open(&USART1_SR,&USART1_DR, "broker.emqx.io", 1883))
+	{
+	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMqtt connection Opened\r\n");
+	    tim2_delay(2000);
+	}
+
+	if(ec200u_mqtt_connect(&USART1_SR, &USART1_DR, "stm32_client"))
+	{
+		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMqtt connected\r\n");
+		tim2_delay(2000);
+	}
+
+	if(ec200u_reset_module(&USART1_SR, &USART1_DR))
+	{
+		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM RESET\r\n");
+		tim2_delay(2000);
+	}
+	else
+	{
+		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM NOT RESET\r\n");
+	}
+
 
 	while (1)
 	{
-		//Toggle led
+//****************Toggle led*******************//
 
 //		gpioa_toggle(5);
 //		gpioa_toggle(6);
 //		tim2_delay(1000);
 
-		//Pin enable and disable
+//******Pin enable and disable*****************//
 
-		gpioa_digitalWrite(5, HIGH);
+//		gpioa_digitalWrite(5, HIGH);
 //		gpioa_digitalWrite(6, HIGH);
-		tim2_delay(1000);
-		gpioa_digitalWrite(5, LOW);
+//		usart_tx_uint(&USART2_SR, &USART2_DR, 1);
+//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//		usart_tx_str(&USART2_SR, &USART2_DR, "LEDON");
+//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//		tim2_delay(1000);
+//		gpioa_digitalWrite(5, LOW);
 //		gpioa_digitalWrite(6, LOW);
-		tim2_delay(1000);
-
-		//Read input pin
-
-//	    uint8_t current_status = gpioc_digitalRead(13);
-	    //usart2_tx_uint(current_status);
-//	    tim2_delay(1000);
-
-		//Transmit char data to serial usart2
-
-//		usart2_tx_ch('A');
-//		usart2_tx_ch('\n');
+//		usart_tx_uint(&USART2_SR, &USART2_DR, 0);
+//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//		usart_tx_str(&USART2_SR, &USART2_DR, "LEDOFF");
+//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
 //		tim2_delay(1000);
 
-		//Transmit string data to serial usart2
+//******Receive char data from serial usart2************//
 
-//		usart2_tx_str("Hello world");
-//		usart2_tx_ch('\n');
-//		tim2_delay(1000);
+//		char rev_ch = usart_rx_ch(&USART2_SR, &USART2_DR);
+//		usart_tx_ch(&USART2_SR, &USART2_DR, rev_ch);
+//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//		if(rev_ch=='A')
+//		{
+//			gpioa_digitalWrite(5, HIGH);
+//			gpioa_digitalWrite(6, HIGH);
+//			usart_tx_uint(&USART2_SR, &USART2_DR, 1);
+//			usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//			usart_tx_str(&USART2_SR, &USART2_DR, "LEDON");
+//			usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//			tim2_delay(1000);
+//		}
+//		else if(rev_ch=='B')
+//		{
+//			gpioa_digitalWrite(5, LOW);
+//			gpioa_digitalWrite(6, LOW);
+//			usart_tx_uint(&USART2_SR, &USART2_DR, 0);
+//			usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//			usart_tx_str(&USART2_SR, &USART2_DR, "LEDOFF");
+//			usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//			tim2_delay(1000);
+//		}
+//		else
+//		{
+//			usart_tx_str(&USART2_SR, &USART2_DR, "Unknown Command");
+//		}
 
-		//Transmit int data to serial usart2
+//******Receive string data from serial usart2**********//
 
-//		usart2_tx_uint(120);
-//		usart2_tx_ch('\n');
-//		tim2_delay(1000);
-
-		//Receive char data from serial usart2
-
-//		char rev_ch = usart2_rx_ch();
-//		usart2_tx_ch(rev_ch);
-//		usart2_tx_ch('\n');
-//		tim2_delay(1000);
-
-		//Receive string  data from serial usart2
-
-//		usart2_rx_str(buffer);
-//		usart2_tx_str("Received: ");
-//		usart2_tx_str(buffer);
-//		usart2_tx_str("\n");
+//		usart_rx_str(&USART2_SR, &USART2_DR, buffer);
+//		usart_tx_str(&USART2_SR, &USART2_DR, "Received:");
+//		usart_tx_str(&USART2_SR, &USART2_DR, buffer);
+//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
 //
 //		if (strcmp(buffer, "LEDON") == 0)
 //		{
 //			gpioa_digitalWrite(5, HIGH);
 //		    gpioa_digitalWrite(6, HIGH);
-//		    usart2_tx_str("LED IS ON\n");
+//		    usart_tx_str(&USART2_SR, &USART2_DR, "LED IS ON\n");
 //		}
 //		else if (strcmp(buffer, "LEDOFF") == 0)
 //		{
 //		    gpioa_digitalWrite(5, LOW);
 //		    gpioa_digitalWrite(6, LOW);
-//		    usart2_tx_str("LED IS OFF\n");
-//		    }
+//		    usart_tx_str(&USART2_SR, &USART2_DR, "LED IS OFF\n");
+//		}
 //		else
 //		{
-//		    usart2_tx_str("Unknown Command\r\n");
+//			usart_tx_str(&USART2_SR, &USART2_DR, "Unknown Command");
 //		}
 
-		//Read analog pin using ADC1
+//**********Read input pin*********************//
+
+//	    uint8_t current_status = gpioc_digitalRead(13);
+//		usart_tx_uint(&USART2_SR, &USART2_DR, current_status);
+//	    if (current_status != prev_status)
+//	    {
+//	        if (!current_status)
+//	        {
+//	        	gpioa_digitalWrite(5, led_status);
+//	            (led_status) ? usart_tx_str(&USART2_SR, &USART2_DR, "LED IS ON"):usart_tx_str(&USART2_SR, &USART2_DR, "LED IS OFF");
+//	            led_status = !led_status;
+//	            tim2_delay(1000);
+//	        }
+//	        prev_status = current_status;
+//	    }
+
+//*********Read analog pin using ADC1**********//
 
 //		uint16_t sensor_data = adc_read();
-//		usart2_tx_uint(sensor_data);
+//		usart_tx_uint(&USART2_SR, &USART2_DR, sensor_data);
 //		if(sensor_data > 3000){
 //			gpioa_digitalWrite(5, HIGH);
 //		}
@@ -140,24 +300,32 @@ int main(void)
 //		}
 //		tim2_delay(1000);
 
-		//Write pwm value
+//******Write pwm value***********************//
 
-//		PWM_val = usart2_rx_uint();
-//	    usart2_tx_str("Received: ");
-//	    usart2_tx_uint(PWM_val);
+//		PWM_val = usart_rx_uint(&USART2_SR, &USART2_DR);
+//		usart_tx_str(&USART2_SR, &USART2_DR, "Received:");
+//		usart_tx_uint(&USART2_SR, &USART2_DR, PWM_val);
 //	    gpiob_pwm_write(0, PWM_val);
 //		tim2_delay(1000);
 
+//***********GSM***********************//
+		// PC -> GSM
+		char ch;
 
-//	    if (current_status != prev_status)
-//	    {
-//	        if (!current_status)
-//	        {
-//	        	gpioa_digitalWrite(5, led_status);
-//	            (led_status) ? usart2_tx_str("Led_on\r\n"):usart2_tx_str("Led_off\r\n");
-//	            led_status = !led_status;
-//	        }
-//	        prev_status = current_status;
-//	    }
+		/* PC -> GSM */
+		if(usart_available(&USART2_SR))
+		{
+		    ch = usart_rx_ch(&USART2_SR, &USART2_DR);
+
+		    usart_tx_ch(&USART1_SR, &USART1_DR, ch);
+		}
+
+		/* GSM -> PC */
+		if(usart_available(&USART1_SR))
+		{
+		    ch = usart_rx_ch(&USART1_SR, &USART1_DR);
+
+		    usart_tx_ch(&USART2_SR, &USART2_DR, ch);
+		}
 	}
 }

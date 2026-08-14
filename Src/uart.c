@@ -10,24 +10,54 @@
 #include "pwm.h"
 #include <string.h>
 
+void usart1_init(uint32_t baudrate)
+{
+
+	if(baudrate > 0U){
+
+	RCC_APB2ENR |=  (1U << 4); //Enable clock for usart1
+
+	gpioa_init(9,AF_MODE); //set  PA9(10) to AF mode
+
+	gpioa_init(10,AF_MODE); //set  PA10(10) to AF mode
+
+	GPIOA_AFRH  &= ~((0xFU << (1*4)) | (0xFU << (2*4))); //reset the PA9(0000) and PA10(0000) AFRL register values
+
+	GPIOA_AFRH  |=  ((0x7U << (1*4)) | (0x7U << (2*4))); //set the PA9(0111) and PA10(0111) for AF7 because datasheet says AF7 as USART1
+
+	USART1_BRR = (APB2_CLK_HZ  + (baudrate / 2U)) / baudrate; //BRR = PCLK / Baud Rate (rounded to nearest)
+
+	USART1_CR1 |= (1U << 3); //set TE bit Tx enable
+
+	USART1_CR1 |= (1U << 2); //set RE bit RX enable
+
+	USART1_CR1 |= (1U << 13); //set UE bit USART1 enable
+
+	}
+
+}
+
+uint8_t usart_available(volatile uint32_t *SR)
+{
+	return *SR & (1U << 5);
+}
+
 void usart2_init(uint32_t baudrate)
 {
 
 	if(baudrate > 0U){
 
-	RCC_AHB1ENR |=  (1U << 0);  //Enable clock for GPIOA
-
 	RCC_APB1ENR |=  (1U << 17); //Enable clock for usart2
 
-	GPIOA_MODER &= ~((3U << (2*2)) | (3U << (3*2))); //reset the PA2(00) and PA3(00) pins
+	gpioa_init(2,AF_MODE); //set  PA2(10) to AF mode
 
-	GPIOA_MODER |=  ((2U << (2*2)) | (2U << (3*2))); //set  PA2(10) and PA3(10) to AF mode
+	gpioa_init(3,AF_MODE); //set  PA3(10) to AF mode
 
 	GPIOA_AFRL  &= ~((0xFU << (2*4)) | (0xFU << (3*4))); //reset the PA2(0000) and PA3(0000) AFRL register values
 
 	GPIOA_AFRL  |=  ((0x7U << (2*4)) | (0x7U << (3*4))); //set the PA2(0111) and PA3(0111) for AF7 because datasheet says AF7 as USART2
 
-	USART2_BRR = (TIMER_CLK_HZ + (baudrate / 2U)) / baudrate; //BRR = PCLK / Baud Rate (rounded to nearest)
+	USART2_BRR = (APB1_CLK_HZ + (baudrate / 2U)) / baudrate; //BRR = PCLK / Baud Rate (rounded to nearest)
 
 	USART2_CR1 |= (1U << 3); //set TE bit Tx enable
 
@@ -39,21 +69,21 @@ void usart2_init(uint32_t baudrate)
 
 }
 
-void usart2_tx_ch(char ch)
+void usart_tx_ch(volatile uint32_t *SR, volatile uint32_t *DR, char ch)
 {
 
-	while(!(USART2_SR & (1U<<7))); //Wait until TXE bit is 1
+		while(!(*SR & (1U<<7))); //Wait until TXE bit is 1
 
-	USART2_DR = ch; //assign data register to required character
+		*DR = ch; //assign data register to required character
 
 }
 
-void usart2_tx_str(const char *str)
+void usart_tx_str(volatile uint32_t *SR, volatile uint32_t *DR, const char *str)
 {
 
     while (*str) {           // Loop until null terminator
 
-        usart2_tx_ch(*str);  // Send current character
+    	usart_tx_ch(SR, DR, *str); // Send current character
 
         str++;               // Move to next character
 
@@ -61,7 +91,7 @@ void usart2_tx_str(const char *str)
 
 }
 
-void usart2_tx_uint(uint32_t num)
+void usart_tx_uint(volatile uint32_t *SR, volatile uint32_t *DR, uint32_t num)
 {
 
     char buf[11];
@@ -71,9 +101,9 @@ void usart2_tx_uint(uint32_t num)
     if (num == 0)
     {
 
-        usart2_tx_ch('0');
+    	usart_tx_ch(SR, DR, '0'); // Send current character
 
-        usart2_tx_ch('\n');
+    	usart_tx_ch(SR, DR, '\n'); // Send current character
 
         return;
 
@@ -91,24 +121,24 @@ void usart2_tx_uint(uint32_t num)
     while (i > 0)
     {
 
-        usart2_tx_ch(buf[--i]);
+        usart_tx_ch(SR, DR, buf[--i]); // Send current character
 
     }
 
-    usart2_tx_ch('\n');
+    usart_tx_ch(SR, DR, '\n'); // Send current character
 
 }
 
-char usart2_rx_ch(void)
+char usart_rx_ch(volatile uint32_t *SR, volatile uint32_t *DR)
 {
 
-	while(!(USART2_SR & (1U<<5))); //Wait until RXEN bit is 1
+	while(!(*SR & (1U<<5))); //Wait until RXEN is set
 
-	return (char)USART2_DR; //retun received character
+	return (char)*DR; //return received character
 
 }
 
-void usart2_rx_str(char *buffer)
+void usart_rx_str(volatile uint32_t *SR, volatile uint32_t *DR, char *buffer)
 {
     uint32_t i = 0;
 
@@ -116,7 +146,7 @@ void usart2_rx_str(char *buffer)
 
     while (1)
     {
-        ch = usart2_rx_ch();
+        ch = usart_rx_ch(SR, DR);
 
         if (ch == '\r' || ch == '\n')
         {
@@ -124,20 +154,20 @@ void usart2_rx_str(char *buffer)
             break;
         }
 
-        if (i < RX_BUFFER_SIZE)
+        if(i < (RX_BUFFER_SIZE - 1))
         {
             buffer[i++] = ch;
         }
     }
 }
 
-uint32_t usart2_rx_uint(void)
+uint32_t usart_rx_uint(volatile uint32_t *SR, volatile uint32_t *DR)
 {
     char buffer[12];
     uint32_t value = 0;
     uint32_t i = 0;
 
-    usart2_rx_str(buffer);    // Receive "12345"
+    usart_rx_str(SR, DR, buffer);
 
     while (buffer[i] != '\0')
     {
@@ -156,100 +186,27 @@ uint32_t usart2_rx_uint(void)
     return value;
 }
 
-void usart2_rx_interrupt(void){
+//void usart1_rx_interrupt(void){
+//
+//	USART1_CR1 |= (1U << 5); // Enable RXNE interrupt
+//
+//	NVIC_ISER1 |= (1U << (USART1_IRQn-32));
+//
+//}
+//
+//void usart2_rx_interrupt(void){
+//
+//	USART2_CR1 |= (1U << 5); //set RXNE bit RX enable
+//
+//	NVIC_ISER1 |= (1U << (USART2_IRQn-32));
+//
+//}
 
-	USART2_CR1 |= (1U << 5); //set RXNE bit RX enable
-
-	NVIC_ISER1 |= (1U << 6);
+void USART1_IRQHandler(void){
 
 }
 
 void USART2_IRQHandler(void){
-
-//  Receive char value using uart interrupt
-
-//	if(USART2_SR & (1U << 5)){ //Wait until RXEN bit is 1
-//
-//		char data = (char)USART2_DR;
-//
-//		usart2_tx_ch(data);
-//
-//		usart2_tx_ch('\n');
-//
-//		count++;
-//
-//		if(data == '1'){
-//
-//			gpioa_digitalWrite(5, HIGH);
-//
-//			gpioa_digitalWrite(6, HIGH);
-//
-//		}
-//		else if(data == '0'){
-//
-//			gpioa_digitalWrite(5, LOW);
-//
-//			gpioa_digitalWrite(6, LOW);
-//
-//		}
-//		else if(data == 't'){
-//
-//			usart2_tx_uint(count);
-//
-//		}
-//
-//	}
-
-//  Receive string value using uart interrupt
-
-//	if(USART2_SR & (1U << 5)){
-//
-//			usart2_rx_str(buffer);
-//
-//			usart2_tx_str("Received: ");
-//
-//			usart2_tx_str(buffer);
-//
-//			usart2_tx_str("\n");
-//
-//			if (strcmp(buffer, "LEDON") == 0)
-//			{
-//				gpioa_digitalWrite(5, HIGH);
-//
-//			    gpioa_digitalWrite(6, HIGH);
-//
-//			    usart2_tx_str("LED IS ON\n");
-//
-//			}
-//
-//			else if (strcmp(buffer, "LEDOFF") == 0)
-//			{
-//			    gpioa_digitalWrite(5, LOW);
-//
-//			    gpioa_digitalWrite(6, LOW);
-//
-//			    usart2_tx_str("LED IS OFF\n");
-//
-//			}
-//			else
-//			{
-//			    usart2_tx_str("Unknown Command\r\n");
-//			}
-//	}
-
-//  Receive int value using uart interrupt and work pwm
-
-//	if(USART2_SR & (1U << 5)){
-//
-//		PWM_val = usart2_rx_uint();
-//
-//		usart2_tx_str("Received: ");
-//
-//		usart2_tx_uint(PWM_val);
-//
-//		gpiob_pwm_write(0, PWM_val);
-//
-//	}
 
 }
 

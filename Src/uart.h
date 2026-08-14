@@ -10,19 +10,25 @@
 
 #include <stdint.h>
 
+void usart1_init(uint32_t baudrate);
+
 void usart2_init(uint32_t baudrate);
 
-void usart2_tx_ch(char);
+uint8_t usart_available(volatile uint32_t*);
 
-void usart2_tx_str(const char*);
+void usart_tx_ch(volatile uint32_t*, volatile uint32_t*, char);
 
-void usart2_tx_uint(uint32_t);
+void usart_tx_str(volatile uint32_t*, volatile uint32_t*, const char*);
 
-void usart2_rx_str(char *buffer);
+void usart_tx_uint(volatile uint32_t*, volatile uint32_t*, uint32_t);
 
-uint32_t usart2_rx_uint(void);
+char usart_rx_ch(volatile uint32_t*, volatile uint32_t*);
 
-char usart2_rx_ch(void);
+void usart_rx_str(volatile uint32_t*, volatile uint32_t*, char*);
+
+uint32_t usart_rx_uint(volatile uint32_t*, volatile uint32_t*);
+
+void usart1_rx_interrupt(void);
 
 void usart2_rx_interrupt(void);
 

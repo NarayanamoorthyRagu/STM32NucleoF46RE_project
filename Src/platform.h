@@ -9,12 +9,17 @@
 #define PLATFORM_H_
 
 #include <stdint.h>
+
+#define APB1_CLK_HZ 	  16000000U
+#define APB2_CLK_HZ 	  16000000U
+
 #define RCC_BASE          0x40023800UL  //Reset and clock register base
 #define GPIOA_BASE 		  0x40020000UL
 #define GPIOB_BASE 		  0x40020400UL
 #define GPIOC_BASE 		  0x40020800UL
 #define TIM2_BASE 		  0x40000000UL
 #define TIM3_BASE 		  0x40000400UL
+#define USART1_BASE       0x40011000UL
 #define USART2_BASE       0x40004400UL
 #define SYSCFG_BASE       0x40013800UL  //System configure base
 #define EXTI_BASE         0x40013C00UL  //External interrupt base
@@ -33,6 +38,7 @@
 #define GPIO_BSRR_OFFSET     0x18
 #define GPIO_LCKR_OFFSET     0x1C
 #define GPIO_AFRL_OFFSET     0x20
+#define GPIO_AFRH_OFFSET     0x24
 
 #define TIM_CR1_OFFSET 	  0x00
 #define TIM_DIER_OFFSET   0x0C
@@ -60,6 +66,8 @@
 #define USART_DR		  0x04
 #define USART_BRR 		  0x08
 #define USART_CR1         0x0C
+#define USART_CR2         0x10
+#define USART_CR3         0x14
 
 #define ADC_SR_OFFSET     0x00
 #define ADC_CR1_OFFSET	  0x04
@@ -94,6 +102,7 @@
 #define GPIOA_ODR         (*(volatile uint32_t *)(GPIOA_BASE + GPIO_ODR_OFFSET))
 #define GPIOA_BSRR	      (*(volatile uint32_t *)(GPIOA_BASE + GPIO_BSRR_OFFSET))
 #define GPIOA_AFRL        (*(volatile uint32_t *)(GPIOA_BASE + GPIO_AFRL_OFFSET))
+#define GPIOA_AFRH        (*(volatile uint32_t *)(GPIOA_BASE + GPIO_AFRH_OFFSET))
 
 #define GPIOB_MODER       (*(volatile uint32_t *)(GPIOB_BASE + GPIO_MODER_OFFSET))
 #define GPIOB_AFRL        (*(volatile uint32_t *)(GPIOB_BASE + GPIO_AFRL_OFFSET))
@@ -114,8 +123,17 @@
 #define TIM3_CR1          (*(volatile uint32_t *)(TIM3_BASE + TIM_CR1_OFFSET))
 #define TIM3_CCR3         (*(volatile uint32_t *)(TIM3_BASE + TIM_CCR3_OFFSET))
 
+#define USART1_BRR 		  (*(volatile uint32_t *)(USART1_BASE + USART_BRR))
+#define USART1_CR1 		  (*(volatile uint32_t *)(USART1_BASE + USART_CR1))
+#define USART1_CR2 		  (*(volatile uint32_t *)(USART1_BASE + USART_CR2))
+#define USART1_CR3 		  (*(volatile uint32_t *)(USART1_BASE + USART_CR3))
+#define USART1_SR 		  (*(volatile uint32_t *)(USART1_BASE + USART_SR))
+#define USART1_DR 		  (*(volatile uint32_t *)(USART1_BASE + USART_DR))
+
 #define USART2_BRR 		  (*(volatile uint32_t *)(USART2_BASE + USART_BRR))
 #define USART2_CR1 		  (*(volatile uint32_t *)(USART2_BASE + USART_CR1))
+#define USART2_CR2 		  (*(volatile uint32_t *)(USART2_BASE + USART_CR2))
+#define USART2_CR3 		  (*(volatile uint32_t *)(USART2_BASE + USART_CR3))
 #define USART2_SR 		  (*(volatile uint32_t *)(USART2_BASE + USART_SR))
 #define USART2_DR 		  (*(volatile uint32_t *)(USART2_BASE + USART_DR))
 
@@ -153,22 +171,28 @@
 #define NVIC_ISER0  	  (*(volatile uint32_t *)0xE000E100)
 #define NVIC_ISER1  	  (*(volatile uint32_t *)0xE000E104)
 
-#define TIMER_CLK_HZ            16000000U      // TIM2 input clock (16 MHz)
 #define TIMER_TICK_MS_DELAY     1000U          // 1 ms timer tick
 #define TIMER_TICK_US_PWM       1000000U       // 1 us timer tick
 
-#define INPUT   0
-#define OUTPUT  1
-#define ANALOG  3
+#define INPUT   0U
+#define OUTPUT  1U
+#define AF_MODE 2U
+#define ANALOG  3U
 
-#define LOW     0
-#define HIGH    1
+#define LOW     0U
+#define HIGH    1U
 
-#define RX_BUFFER_SIZE    100
+#define RX_BUFFER_SIZE    128
 extern char buffer[RX_BUFFER_SIZE];
 
 extern uint32_t count;
 extern uint32_t PWM_val;
 extern uint32_t seconds;
+
+#define ADC_IRQn	   18
+#define TIM2_IRQn      28
+#define USART1_IRQn    37
+#define USART2_IRQn    38
+#define EXTI15_10_IRQn 40
 
 #endif /* PLATFORM_H_ */

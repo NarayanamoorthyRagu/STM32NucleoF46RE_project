@@ -79,7 +79,7 @@ void adc_interrupt(void)
 
 	ADC_CR1 	   |=  (1U   << 5);  //Enable ADC interrupt bit
 
-	NVIC_ISER0 	   |=  (1U   << 18); //Enable ADC interrupt in ISER0 in NVIC
+	NVIC_ISER0 	   |=  (1U   << ADC_IRQn); //Enable ADC interrupt in ISER0 in NVIC
 
 }
 
@@ -88,7 +88,7 @@ void ADC_IRQHandler(void)
 	if((ADC_SR & (1U << 1))) // Wait until End Of Conversion (EOC) flag is set
 	{
 
-		usart2_tx_uint((uint16_t)ADC_DR); //Print the ADC value in USART2
+		usart_tx_uint(&USART2_SR, &USART2_DR, (uint16_t)ADC_DR); //Print the ADC value in USART2
 
 		tim2_delay(1000);
 

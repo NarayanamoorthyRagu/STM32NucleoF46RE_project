@@ -20,12 +20,6 @@ void gpioa_init(uint8_t pin,uint8_t mode)
 
     GPIOA_OSPEEDR &= ~(3U    << (pin*2));
 
-    GPIOA_LCKR = (1U << pin) | (1U << 16);   // Step 1
-	GPIOA_LCKR = (1U << pin);                // Step 2
-	GPIOA_LCKR = (1U << pin) | (1U << 16);   // Step 3.p
-
-	(void)GPIOA_LCKR;                        // Step 4: Read
-	(void)GPIOA_LCKR;                        // Step 5: Read again
 }
 
 void gpioc_init(uint8_t pin,uint8_t mode)

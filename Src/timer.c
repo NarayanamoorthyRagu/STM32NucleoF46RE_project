@@ -16,7 +16,7 @@ void tim2_init(void)
 
 	TIM2_CR1 	&= ~(1U << 0); // stop the timer
 
-	TIM2_PSC =  (TIMER_CLK_HZ / TIMER_TICK_MS_DELAY) - 1U; // Set prescalar for 1ms because timer needs atleast 1ms
+	TIM2_PSC =  (APB1_CLK_HZ / TIMER_TICK_MS_DELAY) - 1U; // Set prescalar for 1ms because timer needs atleast 1ms
 
 
 }
@@ -54,29 +54,29 @@ void tim2_interrupt(uint32_t ms)
 
 	TIM2_ARR = ms - 1;
 
-	TIM2_DIER |= (1<<0);      // UIE enable interuupt for tim2
+	TIM2_DIER |= (1 << 0);      // UIE enable interuupt for tim2
 
-	TIM2_CR1  |= (1<<0);      // Start the timer
+	TIM2_CR1  |= (1 << 0);      // Start the timer
 
-	NVIC_ISER0 |= (1<<28);    // TIM2 IRQ
-
-}
-
-void TIM2_IRQHandler(void)
-{
-
-    if(TIM2_SR & (1<<0))
-    {
-
-        TIM2_SR &= ~(1<<0);      // Clear UIF
-
-        gpioa_toggle(5);
-
-        count++;
-
-        usart2_tx_uint(count);
-
-    }
+	NVIC_ISER0 |= (1 << TIM2_IRQn);    // TIM2 IRQ
 
 }
+
+//void TIM2_IRQHandler(void)
+//{
+//
+//    if(TIM2_SR & (1<<0))
+//    {
+//
+//        TIM2_SR &= ~(1<<0);      // Clear UIF
+//
+//        gpioa_toggle(5);
+//
+//        count++;
+//
+//        usart2_tx_uint(count);
+//
+//    }
+//
+//}
 

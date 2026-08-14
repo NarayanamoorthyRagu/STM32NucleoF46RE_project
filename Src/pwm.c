@@ -22,7 +22,7 @@ void gpiob_pwm_init(uint8_t pin)
 
 	GPIOB_AFRL  |=  (0x2U << (pin*4)); //set the PA1(0001)  for AF2 because datasheet says AF2 as TIMER3
 
-	TIM3_PSC = (TIMER_CLK_HZ / TIMER_TICK_US_PWM) - 1U; // Set prescalar for 1us because pwm need less delay
+	TIM3_PSC =  (APB1_CLK_HZ / TIMER_TICK_US_PWM) - 1U; // Set prescalar for 1us because pwm need less delay
 
 	TIM3_ARR = 999; //Reload after 1ms .so we set 999 auto reload register
 

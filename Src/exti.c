@@ -30,7 +30,7 @@ void exti13_init(void)
 
 	EXTI_RTSR 	   &= ~(1 << 13);  //reset the pc13 pin rising trigger pin(because we cant use rising edge)
 
-	NVIC_ISER1 	   |=  (1 << 8);   //Enable interrupt for external interrupt in nvic
+	NVIC_ISER1 	   |=  (1 << (EXTI15_10_IRQn-32));   //Enable interrupt for external interrupt in nvic
 
 }
 
@@ -46,11 +46,11 @@ void EXTI15_10_IRQHandler(void)
 
         if (led_status)
 
-            usart2_tx_str("Led_on\r\n");
+        	usart_tx_str(&USART2_SR, &USART2_DR,"Led_on\r\n");
 
         else
 
-            usart2_tx_str("Led_off\r\n");
+        	usart_tx_str(&USART2_SR, &USART2_DR,"Led_off\r\n");
 
         led_status = !led_status;
     }
