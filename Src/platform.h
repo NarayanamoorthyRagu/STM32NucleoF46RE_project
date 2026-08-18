@@ -195,4 +195,7 @@ extern uint32_t seconds;
 #define USART2_IRQn    38
 #define EXTI15_10_IRQn 40
 
+#define MQTT_OPEN_TIMEOUT_MS    10000   // 10 second timeout
+#define RESPONSE_BUFFER_SIZE    256
+
 #endif /* PLATFORM_H_ */

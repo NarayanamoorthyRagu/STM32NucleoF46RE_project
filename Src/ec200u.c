@@ -330,48 +330,181 @@ uint8_t ec200u_set_mqtt_version(volatile uint32_t *SR, volatile uint32_t *DR)
     return ec200u_send_and_wait(SR, DR, "AT+QMTCFG=\"version\",0,3", response);
 }
 
-uint8_t ec200u_mqtt_open(volatile uint32_t *SR,
-                         volatile uint32_t *DR,
-                         const char *broker,
-                         uint16_t port)
+uint8_t ec200u_mqtt_open(volatile uint32_t *SR, volatile uint32_t *DR, const char *broker, uint16_t port)
 {
     char cmd[128];
     char response[256];
+
     uint32_t index = 0;
     char ch;
 
-    sprintf(cmd,
-            "AT+QMTOPEN=0,\"%s\",%u",
-            broker,
-            port);
+    sprintf(cmd, "AT+QMTOPEN=0,\"%s\",%u", broker, port);
 
+    /* Send AT command */
     ec200u_send_cmd(SR, DR, cmd);
 
     memset(response, 0, sizeof(response));
 
-    while(index < sizeof(response)-1)
+    /* Receive response */
+    while (index < sizeof(response) - 1)
     {
         ch = usart_rx_ch(SR, DR);
 
-        response[index++] = ch;
-        response[index] = '\0';
-
-        usart_tx_ch(&USART2_SR,&USART2_DR,ch);
-
-        if(strstr(response, "+QMTOPEN: 0,0"))
+        /* Store everything except CR/LF */
+        if (ch != '\r' && ch != '\n')
         {
-            return 1U;
+            response[index++] = ch;
+            response[index] = '\0';
         }
 
-        if(strstr(response, "+QMTOPEN:"))
+        /*
+         * Wait until complete response is received.
+         *
+         * Accept both:
+         * +QMTOPEN:0,1
+         * +QMTOPEN: 0,1
+         */
+        if (strstr(response, "+QMTOPEN:0,") != NULL ||
+            strstr(response, "+QMTOPEN: 0,") != NULL)
         {
-            return 0U;
+            /*
+             * We have reached the result.
+             * Continue receiving until final digit.
+             */
+            if (response[index - 1] >= '0' &&
+                response[index - 1] <= '9')
+            {
+                break;
+            }
         }
+    }
+
+    /* Find QMTOPEN response */
+    char *qmtopen = strstr(response, "+QMTOPEN:");
+
+    if (qmtopen != NULL)
+    {
+        /* Print only QMTOPEN response */
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     "\r\n");
+
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     qmtopen);
+
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     "\r\n");
+    }
+    else
+    {
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     "\r\nQMTOPEN response not found\r\n");
+    }
+
+    /* Success */
+    if (strstr(response, "+QMTOPEN:0,0") != NULL ||
+        strstr(response, "+QMTOPEN: 0,0") != NULL)
+    {
+        return 1U;
     }
 
     return 0U;
 }
-uint8_t ec200u_mqtt_connect(volatile uint32_t *SR, volatile uint32_t *DR, const char *client_id)
+
+uint8_t ec200u_mqtt_connect(
+    volatile uint32_t *SR,
+    volatile uint32_t *DR,
+    const char *client_id)
+{
+    char cmd[128];
+    char response[256];
+
+    uint32_t index = 0;
+    char ch;
+    char *qmtconn;
+
+    sprintf(cmd, "AT+QMTCONN=0,\"%s\"", client_id);
+
+    /* Send command */
+    ec200u_send_cmd(SR, DR, cmd);
+
+    memset(response, 0, sizeof(response));
+
+    /* Receive response */
+    while (index < sizeof(response) - 1)
+    {
+        ch = usart_rx_ch(SR, DR);
+
+        /* Store received character */
+        if (ch != '\r' && ch != '\n')
+        {
+            response[index++] = ch;
+            response[index] = '\0';
+        }
+
+        /*
+         * Stop when complete QMTCONN response is received.
+         *
+         * Supports:
+         * +QMTCONN: 0,0,0
+         * +QMTCONN:0,0,0
+         */
+        if (strstr(response, "+QMTCONN: 0,0,0") != NULL ||
+            strstr(response, "+QMTCONN:0,0,0") != NULL)
+        {
+            break;
+        }
+    }
+
+    /*
+     * Find +QMTCONN
+     */
+    qmtconn = strstr(response, "+QMTCONN:");
+
+    if (qmtconn != NULL)
+    {
+        /*
+         * Print only:
+         *
+         * +QMTCONN: 0,0,0
+         */
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     "\r\n");
+
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     qmtconn);
+
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     "\r\n");
+    }
+    else
+    {
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     "\r\nQMTCONN response not found\r\n");
+    }
+
+    /*
+     * MQTT connection successful
+     */
+    if (strstr(response, "+QMTCONN: 0,0,0") != NULL ||
+        strstr(response, "+QMTCONN:0,0,0") != NULL)
+    {
+        return 1U;
+    }
+
+    return 0U;
+}
+
+uint8_t ec200u_mqtt_subscribe(volatile uint32_t *SR,
+                              volatile uint32_t *DR,
+                              const char *topic)
 {
     char cmd[128];
     char response[256];
@@ -379,12 +512,12 @@ uint8_t ec200u_mqtt_connect(volatile uint32_t *SR, volatile uint32_t *DR, const 
     char ch;
 
     sprintf(cmd,
-            "AT+QMTCONN=0,\"%s\"",
-            client_id);
-
-    ec200u_send_cmd(SR, DR, cmd);
+            "AT+QMTSUB=0,1,\"%s\",0",
+            topic);
 
     memset(response, 0, sizeof(response));
+
+    ec200u_send_cmd(SR, DR, cmd);
 
     while(index < sizeof(response)-1)
     {
@@ -393,16 +526,9 @@ uint8_t ec200u_mqtt_connect(volatile uint32_t *SR, volatile uint32_t *DR, const 
         response[index++] = ch;
         response[index] = '\0';
 
-        usart_tx_ch(&USART2_SR,&USART2_DR,ch);
-
-        if(strstr(response, "+QMTCONN: 0,0,0"))
+        if(strstr(response, "+QMTSUB: 0,1,0,1"))
         {
             return 1U;
-        }
-
-        if(strstr(response, "+QMTCONN:"))
-        {
-            return 0U;
         }
 
         if(strstr(response, "ERROR"))
@@ -413,6 +539,7 @@ uint8_t ec200u_mqtt_connect(volatile uint32_t *SR, volatile uint32_t *DR, const 
 
     return 0U;
 }
+
 uint8_t ec200u_send_and_wait(volatile uint32_t *SR, volatile uint32_t *DR, const char *cmd, char *response)
 {
     uint32_t index = 0;
@@ -429,6 +556,8 @@ uint8_t ec200u_send_and_wait(volatile uint32_t *SR, volatile uint32_t *DR, const
         response[index++] = ch;
         response[index] = '\0';
 
+        //usart_tx_ch(&USART2_SR, &USART2_DR, ch);
+
         if(strstr(response, "OK") != NULL)
         {
             return 1U;
@@ -442,6 +571,7 @@ uint8_t ec200u_send_and_wait(volatile uint32_t *SR, volatile uint32_t *DR, const
 
     return 0U;
 }
+
 void ec200u_send_cmd(volatile uint32_t *SR, volatile uint32_t *DR,const char *cmd)
 {
     usart_tx_str(SR, DR, cmd);

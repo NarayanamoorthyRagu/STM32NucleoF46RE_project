@@ -58,9 +58,19 @@ int main(void)
 	char operator_name[128];
 	uint8_t signal;
 	char iccid[32];
-	//char network[128];
+	char network[128];
 	char version[128];
 	char ip_addr[32];
+
+	if(ec200u_reset_module(&USART1_SR, &USART1_DR))
+	{
+		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM RESET\r\n");
+		tim2_delay(7000);
+	}
+	else
+	{
+		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM NOT RESET\r\n");
+	}
 
 	if(ec200u_check_module(&USART1_SR, &USART1_DR))
 	{
@@ -120,15 +130,15 @@ int main(void)
 	    tim2_delay(2000);
 	}
 
-//	if(ec200u_get_network_info(&USART1_SR,&USART1_DR,network))
-//	{
-//	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nNetwork Info: ");
-//	    usart_tx_str(&USART2_SR,&USART2_DR,network);
-//	}
-//	else
-//	{
-//	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nNetwork Info FAIL\r\n");
-//	}
+	if(ec200u_get_network_info(&USART1_SR,&USART1_DR,network))
+	{
+	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nNetwork Info: ");
+	    usart_tx_str(&USART2_SR,&USART2_DR,network);
+	}
+	else
+	{
+	    usart_tx_str(&USART2_SR,&USART2_DR,"\r\nNetwork Info FAIL\r\n");
+	}
 
 	if(ec200u_get_firmware(&USART1_SR,&USART1_DR,version))
 	{
@@ -169,23 +179,23 @@ int main(void)
 	if(ec200u_mqtt_open(&USART1_SR,&USART1_DR, "broker.emqx.io", 1883))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMqtt connection Opened\r\n");
-	    tim2_delay(2000);
+	    tim2_delay(5000);
 	}
+	else
+	{
+		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMqtt connecton not opened\r\n");
+	}
+
+
+	usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
 
 	if(ec200u_mqtt_connect(&USART1_SR, &USART1_DR, "stm32_client"))
 	{
 		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMqtt connected\r\n");
 		tim2_delay(2000);
 	}
-
-	if(ec200u_reset_module(&USART1_SR, &USART1_DR))
-	{
-		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM RESET\r\n");
-		tim2_delay(2000);
-	}
-	else
-	{
-		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM NOT RESET\r\n");
+	else{
+		usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMqtt connecton failed\r\n");
 	}
 
 
