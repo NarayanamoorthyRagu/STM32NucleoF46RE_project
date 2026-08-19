@@ -11,25 +11,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-uint8_t ec200u_check_module(volatile uint32_t *SR, volatile uint32_t *DR)
-{
-	char response[128];
-
-	return ec200u_send_and_wait(SR, DR, "AT", response);
-}
-
-uint8_t ec200u_reset_module(volatile uint32_t *SR, volatile uint32_t *DR)
-{
-	char response[128];
-
-	return ec200u_send_and_wait(SR, DR, "AT+CFUN=1,1", response);
-}
-
-uint8_t ec200u_check_sim(volatile uint32_t *SR, volatile uint32_t *DR)
+uint8_t ec200u_check_module(USART_Handle_t *husart)
 {
     char response[128];
 
-    if(ec200u_send_and_wait(SR, DR, "AT+CPIN?", response))
+    // Pass the SR and DR from the handle
+    return ec200u_send_and_wait(husart->SR, husart->DR, "AT", response);
+}
+
+uint8_t ec200u_reset_module(USART_Handle_t *husart)
+{
+	char response[128];
+
+	return ec200u_send_and_wait(husart->SR, husart->DR, "AT+CFUN=1,1", response);
+}
+
+uint8_t ec200u_check_sim(USART_Handle_t *husart)
+{
+    char response[128];
+
+    if(ec200u_send_and_wait(husart->SR, husart->DR, "AT+CPIN?", response))
     {
         if(strstr(response, "READY") != NULL)
         {
@@ -40,11 +41,11 @@ uint8_t ec200u_check_sim(volatile uint32_t *SR, volatile uint32_t *DR)
     return 0U;
 }
 
-uint8_t ec200u_check_network(volatile uint32_t *SR, volatile uint32_t *DR)
+uint8_t ec200u_check_network(USART_Handle_t *husart)
 {
     char response[128];
 
-    if(ec200u_send_and_wait(SR, DR, "AT+CREG?", response))
+    if(ec200u_send_and_wait(husart->SR, husart->DR, "AT+CREG?", response))
     {
         if((strstr(response, "+CREG: 0,1") != NULL) || (strstr(response, "+CREG: 0,5") != NULL))
         {
@@ -201,10 +202,7 @@ uint8_t ec200u_get_iccid(volatile uint32_t *SR, volatile uint32_t *DR, char *icc
     return 1U;
 }
 
-uint8_t ec200u_get_network_info(
-    volatile uint32_t *SR,
-    volatile uint32_t *DR,
-    char *network)
+uint8_t ec200u_get_network_info(volatile uint32_t *SR, volatile uint32_t *DR, char *network)
 {
     char response[256];
     uint32_t index = 0;
@@ -218,15 +216,11 @@ uint8_t ec200u_get_network_info(
     /*
      * Send AT+QNWINFO
      */
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "\r\nSENDING QNWINFO...\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSENDING QNWINFO...\r\n");
 
     ec200u_send_cmd(SR, DR, "AT+QNWINFO");
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "QNWINFO COMMAND SENT\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "QNWINFO COMMAND SENT\r\n");
 
     /*
      * Receive response
@@ -279,17 +273,11 @@ uint8_t ec200u_get_network_info(
                         /*
                          * Print received network
                          */
-                        usart_tx_str(&USART2_SR,
-                                     &USART2_DR,
-                                     "\r\nQNWINFO Response:\r\n");
+                        usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQNWINFO Response:\r\n");
 
-                        usart_tx_str(&USART2_SR,
-                                     &USART2_DR,
-                                     response);
+                        usart_tx_str(&USART2_SR, &USART2_DR, response);
 
-                        usart_tx_str(&USART2_SR,
-                                     &USART2_DR,
-                                     "\r\n");
+                        usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
 
                         return 1U;
                     }
@@ -302,17 +290,13 @@ uint8_t ec200u_get_network_info(
          */
         if (strstr(response, "ERROR") != NULL)
         {
-            usart_tx_str(&USART2_SR,
-                         &USART2_DR,
-                         "\r\nQNWINFO ERROR\r\n");
+            usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQNWINFO ERROR\r\n");
 
             return 0U;
         }
     }
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "\r\nQNWINFO RESPONSE TIMEOUT\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQNWINFO RESPONSE TIMEOUT\r\n");
 
     return 0U;
 }
@@ -365,11 +349,11 @@ uint8_t ec200u_set_apn(volatile uint32_t *SR, volatile uint32_t *DR, const char 
     return ec200u_send_and_wait(SR, DR, cmd, response);
 }
 
-uint8_t ec200u_activate_pdp(volatile uint32_t *SR, volatile uint32_t *DR)
+uint8_t ec200u_activate_pdp(USART_Handle_t *husart)
 {
     char response[128];
 
-    return ec200u_send_and_wait(SR, DR, "AT+QIACT=1", response);
+    return ec200u_send_and_wait(husart->SR, husart->DR, "AT+QIACT=1", response);
 }
 
 uint8_t ec200u_get_ip(volatile uint32_t *SR, volatile uint32_t *DR, char *ip)
@@ -406,11 +390,11 @@ uint8_t ec200u_get_ip(volatile uint32_t *SR, volatile uint32_t *DR, char *ip)
     return 1;
 }
 
-uint8_t ec200u_set_mqtt_version(volatile uint32_t *SR, volatile uint32_t *DR)
+uint8_t ec200u_set_mqtt_version(USART_Handle_t *husart)
 {
     char response[128];
 
-    return ec200u_send_and_wait(SR, DR, "AT+QMTCFG=\"version\",0,3", response);
+    return ec200u_send_and_wait(husart->SR, husart->DR,  "AT+QMTCFG=\"version\",0,3", response);
 }
 
 uint8_t ec200u_mqtt_open(volatile uint32_t *SR, volatile uint32_t *DR, const char *broker, uint16_t port)
@@ -1076,7 +1060,7 @@ uint8_t ec200u_mqtt_receive(volatile uint32_t *SR, volatile uint32_t *DR, char *
     return 1U;
 }
 
-uint8_t ec200u_mqtt_disconnect(volatile uint32_t *SR, volatile uint32_t *DR)
+uint8_t ec200u_mqtt_disconnect(USART_Handle_t *husart)
 {
     char response[128];
     uint32_t index = 0;
@@ -1084,11 +1068,11 @@ uint8_t ec200u_mqtt_disconnect(volatile uint32_t *SR, volatile uint32_t *DR)
 
     usart_tx_str(&USART2_SR, &USART2_DR, "SENDING MQTT DISCONNECT...\r\n");
 
-    usart_tx_str(SR, DR, "AT+QMTDISC=0\r");
+    usart_tx_str(husart->SR, husart->DR, "AT+QMTDISC=0\r");
 
     while (index < (sizeof(response) - 1U))
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(husart->SR, husart->DR);
 
         response[index++] = ch;
         response[index] = '\0';
@@ -1111,7 +1095,7 @@ uint8_t ec200u_mqtt_disconnect(volatile uint32_t *SR, volatile uint32_t *DR)
     return 0U;
 }
 
-uint8_t ec200u_mqtt_close(volatile uint32_t *SR, volatile uint32_t *DR)
+uint8_t ec200u_mqtt_close(USART_Handle_t *husart)
 {
     char response[128];
     uint32_t index = 0;
@@ -1119,11 +1103,11 @@ uint8_t ec200u_mqtt_close(volatile uint32_t *SR, volatile uint32_t *DR)
 
     usart_tx_str(&USART2_SR, &USART2_DR, "SENDING MQTT CLOSE...\r\n");
 
-    usart_tx_str(SR, DR, "AT+QMTCLOSE=0\r");
+    usart_tx_str(husart->SR, husart->DR, "AT+QMTCLOSE=0\r");
 
     while(index < (sizeof(response) - 1U))
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(husart->SR, husart->DR);
 
         response[index++] = ch;
         response[index] = '\0';

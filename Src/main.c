@@ -65,7 +65,7 @@ int main(void)
 	char ip_addr[32];
 
 	/* Reset Module */
-	while(!ec200u_reset_module(&USART1_SR, &USART1_DR))
+	while(!ec200u_reset_module(&USART1))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM NOT RESET - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -75,7 +75,7 @@ int main(void)
 	tim2_delay(7000);
 
 	/* Check AT */
-	while(!ec200u_check_module(&USART1_SR, &USART1_DR))
+	while(!ec200u_check_module(&USART1))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -85,7 +85,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* Check SIM */
-	while(!ec200u_check_sim(&USART1_SR, &USART1_DR))
+	while(!ec200u_check_sim(&USART1))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSIM FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -95,7 +95,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* Check Network */
-	while(!ec200u_check_network(&USART1_SR, &USART1_DR))
+	while(!ec200u_check_network(&USART1))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nNETWORK FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -183,7 +183,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* PDP Activate */
-	while(!ec200u_activate_pdp(&USART1_SR, &USART1_DR))
+	while(!ec200u_activate_pdp(&USART1))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nPDP FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -204,7 +204,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* MQTT Version */
-	while(!ec200u_set_mqtt_version(&USART1_SR, &USART1_DR))
+	while(!ec200u_set_mqtt_version(&USART1))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT VERSION FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -257,12 +257,12 @@ int main(void)
 
 	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT MESSAGE PUBLISHED\r\n");
 
-	if(ec200u_mqtt_disconnect(&USART1_SR, &USART1_DR))
+	if(ec200u_mqtt_disconnect(&USART1))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT DISCONNECTED\r\n");
 	}
 
-	if(ec200u_mqtt_close(&USART1_SR, &USART1_DR))
+	if(ec200u_mqtt_close(&USART1))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT SOCKET CLOSED\r\n");
 	}

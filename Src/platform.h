@@ -195,7 +195,13 @@ extern uint32_t seconds;
 #define USART2_IRQn    38
 #define EXTI15_10_IRQn 40
 
-#define MQTT_OPEN_TIMEOUT_MS    10000   // 10 second timeout
-#define RESPONSE_BUFFER_SIZE    256
+typedef struct {
+    volatile uint32_t *SR;  // Status Register
+    volatile uint32_t *DR;  // Data Register
+    // Other USART parameters...
+} USART_Handle_t;
+
+extern USART_Handle_t USART1;
+extern USART_Handle_t USART2;
 
 #endif /* PLATFORM_H_ */

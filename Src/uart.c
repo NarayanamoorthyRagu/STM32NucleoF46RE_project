@@ -10,6 +10,20 @@
 #include "pwm.h"
 #include <string.h>
 
+#include "platform.h"
+
+USART_Handle_t USART1 =
+{
+    .SR = &USART1_SR,
+    .DR = &USART1_DR
+};
+
+USART_Handle_t USART2 =
+{
+    .SR = &USART2_SR,
+    .DR = &USART2_DR
+};
+
 void usart1_init(uint32_t baudrate)
 {
 

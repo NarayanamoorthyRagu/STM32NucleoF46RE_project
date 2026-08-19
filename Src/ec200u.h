@@ -9,14 +9,17 @@
 #define EC200U_H_
 
 #include <stdint.h>
+#include "platform.h"
 
-uint8_t ec200u_check_module(volatile uint32_t*, volatile uint32_t*);
+//uint8_t ec200u_check_module(volatile uint32_t*, volatile uint32_t*);
 
-uint8_t ec200u_reset_module(volatile uint32_t*, volatile uint32_t*);
+uint8_t ec200u_check_module(USART_Handle_t*);
 
-uint8_t ec200u_check_sim(volatile uint32_t*, volatile uint32_t*);
+uint8_t ec200u_reset_module(USART_Handle_t*);
 
-uint8_t ec200u_check_network(volatile uint32_t*, volatile uint32_t*);
+uint8_t ec200u_check_sim(USART_Handle_t*);
+
+uint8_t ec200u_check_network(USART_Handle_t*);
 
 uint8_t ec200u_get_imei(volatile uint32_t*, volatile uint32_t*,char*);
 
@@ -32,11 +35,11 @@ uint8_t ec200u_get_firmware(volatile uint32_t*, volatile uint32_t*, char*);
 
 uint8_t ec200u_set_apn(volatile uint32_t*, volatile uint32_t*, const char*);
 
-uint8_t ec200u_activate_pdp(volatile uint32_t*, volatile uint32_t*);
+uint8_t ec200u_activate_pdp(USART_Handle_t*);
 
 uint8_t ec200u_get_ip(volatile uint32_t*, volatile uint32_t*, char*);
 
-uint8_t ec200u_set_mqtt_version(volatile uint32_t*, volatile uint32_t*);
+uint8_t ec200u_set_mqtt_version(USART_Handle_t*);
 
 uint8_t ec200u_mqtt_open(volatile uint32_t*, volatile uint32_t*, const char*, uint16_t);
 
@@ -48,9 +51,9 @@ uint8_t ec200u_mqtt_subscribe(volatile uint32_t*, volatile uint32_t*, const char
 
 uint8_t ec200u_mqtt_receive(volatile uint32_t*, volatile uint32_t*, char*, char*);
 
-uint8_t ec200u_mqtt_disconnect(volatile uint32_t*, volatile uint32_t*);
+uint8_t ec200u_mqtt_disconnect(USART_Handle_t*);
 
-uint8_t ec200u_mqtt_close(volatile uint32_t*, volatile uint32_t*);
+uint8_t ec200u_mqtt_close(USART_Handle_t*);
 
 uint8_t ec200u_send_and_wait(volatile uint32_t*, volatile uint32_t*, const char*, char*);
 
