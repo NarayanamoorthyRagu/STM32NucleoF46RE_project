@@ -40,7 +40,13 @@ uint8_t ec200u_set_mqtt_version(volatile uint32_t*, volatile uint32_t*);
 
 uint8_t ec200u_mqtt_open(volatile uint32_t*, volatile uint32_t*, const char*, uint16_t);
 
-uint8_t ec200u_mqtt_connect(volatile uint32_t*, volatile uint32_t*, const char*);
+uint8_t ec200u_mqtt_connect(volatile uint32_t*, volatile uint32_t*, const char*, const char*, const char*);
+
+uint8_t ec200u_mqtt_publish(volatile uint32_t*, volatile uint32_t*, const char*, const char*);
+
+uint8_t ec200u_mqtt_subscribe(volatile uint32_t*, volatile uint32_t*, const char* ,uint8_t);
+
+uint8_t ec200u_mqtt_receive(volatile uint32_t*, volatile uint32_t*, char*, char*);
 
 uint8_t ec200u_send_and_wait(volatile uint32_t*, volatile uint32_t*, const char*, char*);
 

@@ -201,37 +201,120 @@ uint8_t ec200u_get_iccid(volatile uint32_t *SR, volatile uint32_t *DR, char *icc
     return 1U;
 }
 
-uint8_t ec200u_get_network_info(volatile uint32_t *SR, volatile uint32_t *DR, char *network)
+uint8_t ec200u_get_network_info(
+    volatile uint32_t *SR,
+    volatile uint32_t *DR,
+    char *network)
 {
     char response[256];
+    uint32_t index = 0;
+    char ch;
+
     char *start;
     char *end;
 
-    if(!ec200u_send_and_wait(SR, DR, "AT+QNWINFO", response))
+    memset(response, 0, sizeof(response));
+
+    /*
+     * Send AT+QNWINFO
+     */
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "\r\nSENDING QNWINFO...\r\n");
+
+    ec200u_send_cmd(SR, DR, "AT+QNWINFO");
+
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "QNWINFO COMMAND SENT\r\n");
+
+    /*
+     * Receive response
+     */
+    while (index < sizeof(response) - 1)
     {
-        return 0U;
+        ch = usart_rx_ch(SR, DR);
+
+        response[index++] = ch;
+        response[index] = '\0';
+
+        /*
+         * QNWINFO response received
+         *
+         * Example:
+         *
+         * +QNWINFO: "FDD LTE","404","JIO","LTE BAND 3",1650
+         */
+        if (strstr(response, "+QNWINFO:") != NULL)
+        {
+            /*
+             * Wait until closing quote of first field
+             *
+             * +QNWINFO: "FDD LTE"
+             *                      ^
+             */
+            start = strstr(response, "+QNWINFO:");
+
+            if (start != NULL)
+            {
+                start = strchr(start, '"');
+
+                if (start != NULL)
+                {
+                    start++;
+
+                    end = strchr(start, '"');
+
+                    if (end != NULL)
+                    {
+                        /*
+                         * Copy network type
+                         */
+                        strncpy(network,
+                                start,
+                                end - start);
+
+                        network[end - start] = '\0';
+
+                        /*
+                         * Print received network
+                         */
+                        usart_tx_str(&USART2_SR,
+                                     &USART2_DR,
+                                     "\r\nQNWINFO Response:\r\n");
+
+                        usart_tx_str(&USART2_SR,
+                                     &USART2_DR,
+                                     response);
+
+                        usart_tx_str(&USART2_SR,
+                                     &USART2_DR,
+                                     "\r\n");
+
+                        return 1U;
+                    }
+                }
+            }
+        }
+
+        /*
+         * ERROR
+         */
+        if (strstr(response, "ERROR") != NULL)
+        {
+            usart_tx_str(&USART2_SR,
+                         &USART2_DR,
+                         "\r\nQNWINFO ERROR\r\n");
+
+            return 0U;
+        }
     }
 
-    start = strchr(response, '"');
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "\r\nQNWINFO RESPONSE TIMEOUT\r\n");
 
-    if(start == NULL)
-    {
-        return 0U;
-    }
-
-    start++;
-
-    end = strchr(start, '"');
-
-    if(end == NULL)
-    {
-        return 0U;
-    }
-
-    strncpy(network, start, end - start);
-    network[end - start] = '\0';
-
-    return 1U;
+    return 0U;
 }
 
 uint8_t ec200u_get_firmware(volatile uint32_t *SR, volatile uint32_t *DR, char *version)
@@ -417,128 +500,678 @@ uint8_t ec200u_mqtt_open(volatile uint32_t *SR, volatile uint32_t *DR, const cha
 uint8_t ec200u_mqtt_connect(
     volatile uint32_t *SR,
     volatile uint32_t *DR,
-    const char *client_id)
+    const char *client_id,
+    const char *username,
+    const char *password)
 {
     char cmd[128];
-    char response[256];
+    char response[128];
 
     uint32_t index = 0;
     char ch;
-    char *qmtconn;
 
-    sprintf(cmd, "AT+QMTCONN=0,\"%s\"", client_id);
+    uint8_t ok_received = 0U;
+    uint8_t qmtconn_received = 0U;
+    uint8_t comma_count = 0U;
+
+    /* Create QMTCONN command */
+    sprintf(cmd,
+            "AT+QMTCONN=0,\"%s\",\"%s\",\"%s\"",
+            client_id,
+            username,
+            password);
+
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "\r\nSENDING QMTCONN...\r\n");
 
     /* Send command */
     ec200u_send_cmd(SR, DR, cmd);
 
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "QMTCONN COMMAND SENT\r\n");
+
     memset(response, 0, sizeof(response));
 
-    /* Receive response */
+    /*
+     * Receive response
+     */
     while (index < sizeof(response) - 1)
     {
         ch = usart_rx_ch(SR, DR);
 
-        /* Store received character */
-        if (ch != '\r' && ch != '\n')
+        /*
+         * ------------------------------------------------
+         * STEP 1
+         * Wait for OK
+         * ------------------------------------------------
+         */
+        if (ok_received == 0U)
         {
-            response[index++] = ch;
-            response[index] = '\0';
+            static char ok_buffer[3];
+            static uint8_t ok_index = 0U;
+
+            if (ch == 'O')
+            {
+                ok_buffer[0] = 'O';
+                ok_index = 1U;
+            }
+            else if (ch == 'K' && ok_index == 1U)
+            {
+                ok_buffer[1] = 'K';
+                ok_buffer[2] = '\0';
+
+                ok_received = 1U;
+                ok_index = 0U;
+
+                usart_tx_str(&USART2_SR,
+                             &USART2_DR,
+                             "OK RECEIVED\r\n");
+            }
+            else
+            {
+                ok_index = 0U;
+            }
+
+            continue;
         }
 
         /*
-         * Stop when complete QMTCONN response is received.
-         *
-         * Supports:
-         * +QMTCONN: 0,0,0
-         * +QMTCONN:0,0,0
+         * ------------------------------------------------
+         * STEP 2
+         * After OK, look for +QMTCONN:
+         * ------------------------------------------------
          */
-        if (strstr(response, "+QMTCONN: 0,0,0") != NULL ||
-            strstr(response, "+QMTCONN:0,0,0") != NULL)
+
+        /*
+         * Ignore CR and LF
+         */
+        if (ch == '\r' || ch == '\n')
         {
-            break;
+            continue;
+        }
+
+        /*
+         * Store character
+         */
+        response[index++] = ch;
+        response[index] = '\0';
+
+        /*
+         * Check +QMTCONN:
+         */
+        if (strstr(response, "+QMTCONN:") != NULL)
+        {
+            qmtconn_received = 1U;
+        }
+
+        /*
+         * ------------------------------------------------
+         * Count commas after QMTCONN
+         *
+         * Expected:
+         *
+         * +QMTCONN: 0,0,0
+         *             ^ ^
+         *             | |
+         *             1 2
+         * ------------------------------------------------
+         */
+        if (qmtconn_received == 1U)
+        {
+            if (ch == ',')
+            {
+                comma_count++;
+            }
+
+            /*
+             * We need:
+             *
+             * +QMTCONN: 0,0,0
+             *
+             * After the second comma, wait for
+             * the final result digit.
+             */
+            if (comma_count >= 2U)
+            {
+                /*
+                 * Final character should be the
+                 * third result value.
+                 */
+                if (ch >= '0' && ch <= '9')
+                {
+                    /*
+                     * Do not break immediately here
+                     * because this character could be
+                     * the character before the final digit.
+                     *
+                     * Check the complete string below.
+                     */
+                }
+
+                /*
+                 * Check complete successful response
+                 */
+                if (strstr(response,
+                           "+QMTCONN:0,0,0") != NULL ||
+                    strstr(response,
+                           "+QMTCONN: 0,0,0") != NULL)
+                {
+                    break;
+                }
+
+                /*
+                 * Check other complete QMTCONN result.
+                 *
+                 * Examples:
+                 *
+                 * +QMTCONN: 0,3,0
+                 * +QMTCONN: 0,5,0
+                 */
+                if (index >= 1U &&
+                    response[index - 1] >= '0' &&
+                    response[index - 1] <= '9')
+                {
+                    break;
+                }
+            }
         }
     }
 
     /*
-     * Find +QMTCONN
+     * ------------------------------------------------
+     * Print received response
+     * ------------------------------------------------
      */
-    qmtconn = strstr(response, "+QMTCONN:");
 
-    if (qmtconn != NULL)
-    {
-        /*
-         * Print only:
-         *
-         * +QMTCONN: 0,0,0
-         */
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     "\r\n");
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "\r\nQMTCONN Response:\r\n");
 
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     qmtconn);
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 response);
 
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     "\r\n");
-    }
-    else
-    {
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     "\r\nQMTCONN response not found\r\n");
-    }
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "\r\n");
 
     /*
-     * MQTT connection successful
+     * ------------------------------------------------
+     * Check successful MQTT connection
+     * ------------------------------------------------
      */
-    if (strstr(response, "+QMTCONN: 0,0,0") != NULL ||
-        strstr(response, "+QMTCONN:0,0,0") != NULL)
+
+    if (strstr(response, "+QMTCONN:0,0,0") != NULL ||
+        strstr(response, "+QMTCONN: 0,0,0") != NULL)
     {
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     "MQTT CONNECTION SUCCESS\r\n");
+
         return 1U;
     }
+
+    /*
+     * ------------------------------------------------
+     * Connection failed
+     * ------------------------------------------------
+     */
+
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "MQTT CONNECTION FAILED\r\n");
 
     return 0U;
 }
 
-uint8_t ec200u_mqtt_subscribe(volatile uint32_t *SR,
-                              volatile uint32_t *DR,
-                              const char *topic)
+uint8_t ec200u_mqtt_publish(
+    volatile uint32_t *SR,
+    volatile uint32_t *DR,
+    const char *topic,
+    const char *message)
 {
-    char cmd[128];
+    char cmd[256];
     char response[256];
     uint32_t index = 0;
     char ch;
 
+    /*
+     * Create QMTPUB command
+     *
+     * client index = 0
+     * msg ID       = 0
+     * QoS          = 0
+     * retain       = 0
+     */
     sprintf(cmd,
-            "AT+QMTSUB=0,1,\"%s\",0",
+            "AT+QMTPUB=0,0,0,0,\"%s\"",
             topic);
+
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "\r\nSENDING MQTT PUBLISH...\r\n");
+
+    /* Send command */
+    ec200u_send_cmd(SR, DR, cmd);
+
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "MQTT PUBLISH COMMAND SENT\r\n");
+
+    /*
+     * --------------------------------------------------
+     * STEP 1:
+     * Wait for '>' prompt
+     * --------------------------------------------------
+     */
 
     memset(response, 0, sizeof(response));
 
-    ec200u_send_cmd(SR, DR, cmd);
+    index = 0;
 
-    while(index < sizeof(response)-1)
+    while(index < sizeof(response) - 1)
+    {
+        ch = usart_rx_ch(SR, DR);
+
+        /*
+         * Debug: print received character
+         */
+        usart_tx_ch(&USART2_SR,
+                    &USART2_DR,
+                    ch);
+
+        /*
+         * Store character
+         */
+        response[index++] = ch;
+        response[index] = '\0';
+
+        /*
+         * Payload prompt received
+         */
+        if(ch == '>')
+        {
+            usart_tx_str(&USART2_SR,
+                         &USART2_DR,
+                         "\r\nPUBLISH PROMPT RECEIVED\r\n");
+
+            break;
+        }
+
+        /*
+         * Command error
+         */
+        if(strstr(response, "ERROR") != NULL)
+        {
+            usart_tx_str(&USART2_SR,
+                         &USART2_DR,
+                         "\r\nMQTT PUBLISH COMMAND ERROR\r\n");
+
+            return 0U;
+        }
+    }
+
+    /*
+     * Make sure '>' was received.
+     */
+    if(strchr(response, '>') == NULL)
+    {
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     "\r\nPUBLISH PROMPT NOT RECEIVED\r\n");
+
+        return 0U;
+    }
+
+    /*
+     * --------------------------------------------------
+     * STEP 2:
+     * Send MQTT payload
+     * --------------------------------------------------
+     */
+
+    usart_tx_str(SR,
+                 DR,
+                 message);
+
+    /*
+     * CTRL+Z
+     *
+     * Indicates end of MQTT payload.
+     */
+    usart_tx_ch(SR,
+                DR,
+                0x1A);
+
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "\r\nMQTT MESSAGE SENT\r\n");
+
+    /*
+     * --------------------------------------------------
+     * STEP 3:
+     * Receive publish result
+     * --------------------------------------------------
+     */
+
+    memset(response, 0, sizeof(response));
+
+    index = 0;
+
+    while(index < sizeof(response) - 1)
     {
         ch = usart_rx_ch(SR, DR);
 
         response[index++] = ch;
         response[index] = '\0';
 
-        if(strstr(response, "+QMTSUB: 0,1,0,1"))
+        /*
+         * SUCCESS
+         *
+         * +QMTPUB: 0,0,0
+         *
+         * or
+         *
+         * +QMTPUB:0,0,0
+         */
+        if(strstr(response, "+QMTPUB: 0,0,0") != NULL ||
+           strstr(response, "+QMTPUB:0,0,0") != NULL)
         {
+            usart_tx_str(&USART2_SR,
+                         &USART2_DR,
+                         "\r\nMQTT PUBLISH SUCCESS\r\n");
+
             return 1U;
         }
 
-        if(strstr(response, "ERROR"))
+        /*
+         * ERROR
+         */
+        if(strstr(response, "ERROR") != NULL)
         {
-            return 0U;
+            break;
         }
+
+        /*
+         * IMPORTANT:
+         *
+         * Do NOT break just because
+         * "+QMTPUB:" was received.
+         *
+         * The remaining characters may
+         * arrive later.
+         */
+    }
+
+    /*
+     * --------------------------------------------------
+     * STEP 4:
+     * Print complete response
+     * --------------------------------------------------
+     */
+
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "\r\nMQTT PUBLISH Response:\r\n");
+
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 response);
+
+    usart_tx_str(&USART2_SR,
+                 &USART2_DR,
+                 "\r\n");
+
+    /*
+     * Check success one more time.
+     */
+    if(strstr(response, "+QMTPUB: 0,0,0") != NULL ||
+       strstr(response, "+QMTPUB:0,0,0") != NULL)
+    {
+        usart_tx_str(&USART2_SR,
+                     &USART2_DR,
+                     "MQTT PUBLISH SUCCESS\r\n");
+
+        return 1U;
     }
 
     return 0U;
 }
+
+uint8_t ec200u_mqtt_subscribe(
+        volatile uint32_t *SR,
+        volatile uint32_t *DR,
+        const char *topic,
+        uint8_t qos)
+{
+    char cmd[128];
+    char response[256];
+    uint32_t index = 0;
+    char ch;
+
+    /*
+     * ---------------------------------------------------------
+     * 1. Build MQTT subscribe command
+     *
+     * AT+QMTSUB=<client_id>,<msg_id>,"<topic>",<qos>
+     * ---------------------------------------------------------
+     */
+
+    snprintf(cmd,
+             sizeof(cmd),
+             "AT+QMTSUB=0,1,\"%s\",%u\r\n",
+             topic,
+             qos);
+
+    usart_tx_str(SR, DR, cmd);
+
+    /*
+     * Debug message
+     */
+    usart_tx_str(SR, DR, "MQTT SUBSCRIBE COMMAND SENT\r\n");
+
+    /*
+     * ---------------------------------------------------------
+     * 2. Receive response
+     *
+     * We need to wait for:
+     *
+     * OK
+     *
+     * +QMTSUB: 0,1,0
+     *
+     * ---------------------------------------------------------
+     */
+
+    index = 0;
+
+    while (index < sizeof(response) - 1U)
+    {
+        /*
+         * Wait for RX character
+         */
+        while (!(*SR & (1U << 5)));
+
+        ch = (char)(*DR);
+
+        response[index++] = ch;
+        response[index] = '\0';
+
+        /*
+         * Prevent buffer overflow
+         */
+        if (index >= sizeof(response) - 1U)
+        {
+            break;
+        }
+
+        /*
+         * We need the asynchronous +QMTSUB response.
+         */
+        if (strstr(response, "+QMTSUB:") != NULL)
+        {
+            /*
+             * Wait until complete line is received
+             */
+            if (ch == '\n')
+            {
+                break;
+            }
+        }
+    }
+
+    response[index] = '\0';
+
+    usart_tx_str(SR, DR,"MQTT SUBSCRIBE Response:\r\n");
+    usart_tx_str(SR, DR, response);
+
+    /*
+     * ---------------------------------------------------------
+     * 3. Check actual MQTT subscription result
+     *
+     * +QMTSUB: 0,1,0
+     *
+     *                  ^
+     *                  result = 0 -> SUCCESS
+     * ---------------------------------------------------------
+     */
+
+    if (strstr(response, "+QMTSUB: 0,1,0") != NULL)
+    {
+    	usart_tx_str(SR, DR,"MQTT SUBSCRIBE SUCCESS\r\n");
+        return 1U;
+    }
+
+    /*
+     * Any other result is failure.
+     */
+    usart_tx_str(SR, DR,"MQTT SUBSCRIBE FAILED\r\n");
+
+    return 0U;
+}
+
+uint8_t ec200u_mqtt_receive(
+        volatile uint32_t *SR,
+        volatile uint32_t *DR,
+        char *topic,
+        char *message)
+{
+    char response[512];
+    char *start;
+    char *end;
+    uint32_t index = 0;
+    char ch;
+
+    memset(response, 0, sizeof(response));
+
+    /*
+     * Wait for:
+     *
+     * +QMTRECV: 0,0,"topic","message"
+     *
+     */
+
+    while (index < sizeof(response) - 1)
+    {
+        ch = usart_rx_ch(SR, DR);
+
+        response[index++] = ch;
+        response[index] = '\0';
+
+        /*
+         * MQTT receive indication received
+         */
+        if (strstr(response, "+QMTRECV:") != NULL)
+        {
+            /*
+             * Wait until end of line
+             */
+            if (ch == '\n')
+            {
+                break;
+            }
+        }
+    }
+
+    /*
+     * Find QMTRECV
+     */
+    start = strstr(response, "+QMTRECV:");
+
+    if (start == NULL)
+    {
+        return 0U;
+    }
+
+    /*
+     * Find first quote
+     *
+     * +QMTRECV: 0,0,"stm32/command","LEDON"
+     *                  ^
+     */
+    start = strchr(start, '"');
+
+    if (start == NULL)
+    {
+        return 0U;
+    }
+
+    start++;
+
+    /*
+     * Find ending quote of topic
+     */
+    end = strchr(start, '"');
+
+    if (end == NULL)
+    {
+        return 0U;
+    }
+
+    /*
+     * Copy topic
+     */
+    strncpy(topic, start, end - start);
+    topic[end - start] = '\0';
+
+    /*
+     * Move after topic closing quote
+     */
+    start = end + 1;
+
+    /*
+     * Find opening quote of message
+     */
+    start = strchr(start, '"');
+
+    if (start == NULL)
+    {
+        return 0U;
+    }
+
+    start++;
+
+    /*
+     * Find closing quote of message
+     */
+    end = strchr(start, '"');
+
+    if (end == NULL)
+    {
+        return 0U;
+    }
+
+    /*
+     * Copy message
+     */
+    strncpy(message, start, end - start);
+    message[end - start] = '\0';
+
+    return 1U;
+}
+
 
 uint8_t ec200u_send_and_wait(volatile uint32_t *SR, volatile uint32_t *DR, const char *cmd, char *response)
 {
