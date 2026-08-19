@@ -105,7 +105,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* IMEI */
-	while(!ec200u_get_imei(&USART1_SR, &USART1_DR, imei))
+	while(!ec200u_get_imei(&USART1, imei))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nIMEI READ FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -116,7 +116,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* Operator */
-	while(!ec200u_get_operator(&USART1_SR, &USART1_DR, operator_name))
+	while(!ec200u_get_operator(&USART1, operator_name))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nOPERATOR FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -127,7 +127,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* Signal */
-	while(!ec200u_get_signal(&USART1_SR, &USART1_DR, &signal))
+	while(!ec200u_get_signal(&USART1, &signal))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSIGNAL FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -138,7 +138,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* ICCID */
-	while(!ec200u_get_iccid(&USART1_SR, &USART1_DR, iccid))
+	while(!ec200u_get_iccid(&USART1, iccid))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nICCID FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -149,7 +149,7 @@ int main(void)
 	tim2_delay(1000);
 	/* Network Info */
 
-	while(!ec200u_get_network_info(&USART1_SR, &USART1_DR, network))
+	while(!ec200u_get_network_info(&USART1, network))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nNETWORK INFO FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -162,7 +162,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* Firmware */
-	while(!ec200u_get_firmware(&USART1_SR, &USART1_DR, version))
+	while(!ec200u_get_firmware(&USART1, version))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nFIRMWARE FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -173,7 +173,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* APN */
-	while(!ec200u_set_apn(&USART1_SR, &USART1_DR, "jionet"))
+	while(!ec200u_set_apn(&USART1, "jionet"))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nAPN FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -193,7 +193,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* Get IP */
-	while(!ec200u_get_ip(&USART1_SR, &USART1_DR, ip_addr))
+	while(!ec200u_get_ip(&USART1, ip_addr))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nIP FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -214,7 +214,7 @@ int main(void)
 	tim2_delay(1000);
 
 	/* MQTT Open */
-	while(!ec200u_mqtt_open(&USART1_SR, &USART1_DR, "broker.hivemq.com", 1883))
+	while(!ec200u_mqtt_open(&USART1, "broker.hivemq.com", 1883))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT OPEN FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -232,7 +232,7 @@ int main(void)
 	snprintf(client_id, sizeof(client_id),"stm32%lu", (unsigned long)random_number);
 
 	/* MQTT Connect */
-	while(!ec200u_mqtt_connect(&USART1_SR, &USART1_DR, client_id,"",""))
+	while(!ec200u_mqtt_connect(&USART1, client_id,"",""))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT CONNECT FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -241,7 +241,7 @@ int main(void)
 	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT CONNECTED\r\n");
 	tim2_delay(1000);
 
-	while(!ec200u_mqtt_subscribe(&USART1_SR, &USART1_DR, "stm32/command", 0))
+	while(!ec200u_mqtt_subscribe(&USART1, "stm32/command", 0))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT SUBSCRIBE FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -249,7 +249,7 @@ int main(void)
 
 	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT SUBSCRIBED\r\n");
 
-	while(!ec200u_mqtt_publish(&USART1_SR, &USART1_DR, "stm32/status", "Hello from STM32"))
+	while(!ec200u_mqtt_publish(&USART1, "stm32/status", "Hello from STM32"))
 	{
 	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT PUBLISH FAIL - Retrying...\r\n");
 	    tim2_delay(5000);
@@ -389,7 +389,7 @@ int main(void)
 	    gpiob_pwm_write(0, PWM_val);
 		tim2_delay(1000);
 
-		ec200u_mqtt_receive(&USART1_SR, &USART1_DR, topic, message);
+		ec200u_mqtt_receive(&USART1, topic, message);
 
 		if (strcmp(message, "LEDON") == 0)
 		{

@@ -21,35 +21,35 @@ uint8_t ec200u_check_sim(USART_Handle_t*);
 
 uint8_t ec200u_check_network(USART_Handle_t*);
 
-uint8_t ec200u_get_imei(volatile uint32_t*, volatile uint32_t*,char*);
+uint8_t ec200u_get_imei(USART_Handle_t* ,char*);
 
-uint8_t ec200u_get_operator(volatile uint32_t*, volatile uint32_t*,char*);
+uint8_t ec200u_get_operator(USART_Handle_t*,char*);
 
-uint8_t ec200u_get_signal(volatile uint32_t*, volatile uint32_t*, uint8_t*);
+uint8_t ec200u_get_signal(USART_Handle_t*, uint8_t*);
 
-uint8_t ec200u_get_iccid(volatile uint32_t*, volatile uint32_t*, char*);
+uint8_t ec200u_get_iccid(USART_Handle_t*, char*);
 
-uint8_t ec200u_get_network_info(volatile uint32_t*, volatile uint32_t*, char*);
+uint8_t ec200u_get_network_info(USART_Handle_t*, char*);
 
-uint8_t ec200u_get_firmware(volatile uint32_t*, volatile uint32_t*, char*);
+uint8_t ec200u_get_firmware(USART_Handle_t*, char*);
 
-uint8_t ec200u_set_apn(volatile uint32_t*, volatile uint32_t*, const char*);
+uint8_t ec200u_set_apn(USART_Handle_t*, const char*);
 
 uint8_t ec200u_activate_pdp(USART_Handle_t*);
 
-uint8_t ec200u_get_ip(volatile uint32_t*, volatile uint32_t*, char*);
+uint8_t ec200u_get_ip(USART_Handle_t*, char*);
 
 uint8_t ec200u_set_mqtt_version(USART_Handle_t*);
 
-uint8_t ec200u_mqtt_open(volatile uint32_t*, volatile uint32_t*, const char*, uint16_t);
+uint8_t ec200u_mqtt_open(USART_Handle_t*, const char*, uint16_t);
 
-uint8_t ec200u_mqtt_connect(volatile uint32_t*, volatile uint32_t*, const char*, const char*, const char*);
+uint8_t ec200u_mqtt_connect(USART_Handle_t*, const char*, const char*, const char*);
 
-uint8_t ec200u_mqtt_publish(volatile uint32_t*, volatile uint32_t*, const char*, const char*);
+uint8_t ec200u_mqtt_publish(USART_Handle_t*, const char*, const char*);
 
-uint8_t ec200u_mqtt_subscribe(volatile uint32_t*, volatile uint32_t*, const char* ,uint8_t);
+uint8_t ec200u_mqtt_subscribe(USART_Handle_t*, const char* ,uint8_t);
 
-uint8_t ec200u_mqtt_receive(volatile uint32_t*, volatile uint32_t*, char*, char*);
+uint8_t ec200u_mqtt_receive(USART_Handle_t*, char*, char*);
 
 uint8_t ec200u_mqtt_disconnect(USART_Handle_t*);
 

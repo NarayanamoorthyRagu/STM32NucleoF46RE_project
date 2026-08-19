@@ -56,13 +56,13 @@ uint8_t ec200u_check_network(USART_Handle_t *husart)
     return 0U;
 }
 
-uint8_t ec200u_get_imei(volatile uint32_t *SR, volatile uint32_t *DR, char *imei)
+uint8_t ec200u_get_imei(USART_Handle_t *husart, char *imei)
 {
     char response[128];
     char *start;
     char *end;
 
-    if(!ec200u_send_and_wait(SR, DR, "AT+CGSN", response))
+    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+CGSN", response))
     {
         return 0U;
     }
@@ -101,13 +101,13 @@ uint8_t ec200u_get_imei(volatile uint32_t *SR, volatile uint32_t *DR, char *imei
     return 1U;
 }
 
-uint8_t ec200u_get_operator(volatile uint32_t *SR, volatile uint32_t *DR, char *operator_name)
+uint8_t ec200u_get_operator(USART_Handle_t *husart, char *operator_name)
 {
     char response[128];
     char *start;
     char *end;
 
-    if(!ec200u_send_and_wait(SR, DR, "AT+COPS?", response))
+    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+COPS?", response))
     {
         return 0U;
     }
@@ -134,12 +134,12 @@ uint8_t ec200u_get_operator(volatile uint32_t *SR, volatile uint32_t *DR, char *
     return 1U;
 }
 
-uint8_t ec200u_get_signal(volatile uint32_t *SR, volatile uint32_t *DR, uint8_t *rssi)
+uint8_t ec200u_get_signal(USART_Handle_t *husart, uint8_t *rssi)
 {
     char response[128];
     char *start;
 
-    if(!ec200u_send_and_wait(SR, DR, "AT+CSQ", response))
+    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+CSQ", response))
     {
         return 0U;
     }
@@ -163,13 +163,13 @@ uint8_t ec200u_get_signal(volatile uint32_t *SR, volatile uint32_t *DR, uint8_t 
     return 1U;
 }
 
-uint8_t ec200u_get_iccid(volatile uint32_t *SR, volatile uint32_t *DR, char *iccid)
+uint8_t ec200u_get_iccid(USART_Handle_t *husart, char *iccid)
 {
     char response[128];
     char *start;
     char *end;
 
-    if(!ec200u_send_and_wait(SR, DR, "AT+QCCID", response))
+    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+QCCID", response))
     {
         return 0U;
     }
@@ -202,7 +202,7 @@ uint8_t ec200u_get_iccid(volatile uint32_t *SR, volatile uint32_t *DR, char *icc
     return 1U;
 }
 
-uint8_t ec200u_get_network_info(volatile uint32_t *SR, volatile uint32_t *DR, char *network)
+uint8_t ec200u_get_network_info(USART_Handle_t *husart, char *network)
 {
     char response[256];
     uint32_t index = 0;
@@ -218,7 +218,7 @@ uint8_t ec200u_get_network_info(volatile uint32_t *SR, volatile uint32_t *DR, ch
      */
     usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSENDING QNWINFO...\r\n");
 
-    ec200u_send_cmd(SR, DR, "AT+QNWINFO");
+    ec200u_send_cmd(husart->SR, husart->DR, "AT+QNWINFO");
 
     usart_tx_str(&USART2_SR, &USART2_DR, "QNWINFO COMMAND SENT\r\n");
 
@@ -227,7 +227,7 @@ uint8_t ec200u_get_network_info(volatile uint32_t *SR, volatile uint32_t *DR, ch
      */
     while (index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(husart->SR, husart->DR);
 
         response[index++] = ch;
         response[index] = '\0';
@@ -301,12 +301,12 @@ uint8_t ec200u_get_network_info(volatile uint32_t *SR, volatile uint32_t *DR, ch
     return 0U;
 }
 
-uint8_t ec200u_get_firmware(volatile uint32_t *SR, volatile uint32_t *DR, char *version)
+uint8_t ec200u_get_firmware(USART_Handle_t *husart, char *version)
 {
     char response[256];
     char *start;
 
-    if(!ec200u_send_and_wait(SR, DR, "ATI", response))
+    if(!ec200u_send_and_wait(husart->SR, husart->DR, "ATI", response))
     {
         return 0U;
     }
@@ -337,7 +337,7 @@ uint8_t ec200u_get_firmware(volatile uint32_t *SR, volatile uint32_t *DR, char *
     return 1U;
 }
 
-uint8_t ec200u_set_apn(volatile uint32_t *SR, volatile uint32_t *DR, const char *apn)
+uint8_t ec200u_set_apn(USART_Handle_t *husart, const char *apn)
 {
     char cmd[128];
     char response[128];
@@ -346,7 +346,7 @@ uint8_t ec200u_set_apn(volatile uint32_t *SR, volatile uint32_t *DR, const char 
     strcat(cmd, apn);
     strcat(cmd, "\",\"\",\"\",1");
 
-    return ec200u_send_and_wait(SR, DR, cmd, response);
+    return ec200u_send_and_wait(husart->SR, husart->DR, cmd, response);
 }
 
 uint8_t ec200u_activate_pdp(USART_Handle_t *husart)
@@ -356,13 +356,13 @@ uint8_t ec200u_activate_pdp(USART_Handle_t *husart)
     return ec200u_send_and_wait(husart->SR, husart->DR, "AT+QIACT=1", response);
 }
 
-uint8_t ec200u_get_ip(volatile uint32_t *SR, volatile uint32_t *DR, char *ip)
+uint8_t ec200u_get_ip(USART_Handle_t *husart, char *ip)
 {
     char response[256];
     char *start;
     char *end;
 
-    if(!ec200u_send_and_wait(SR, DR, "AT+QIACT?", response))
+    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+QIACT?", response))
     {
         return 0;
     }
@@ -397,7 +397,7 @@ uint8_t ec200u_set_mqtt_version(USART_Handle_t *husart)
     return ec200u_send_and_wait(husart->SR, husart->DR,  "AT+QMTCFG=\"version\",0,3", response);
 }
 
-uint8_t ec200u_mqtt_open(volatile uint32_t *SR, volatile uint32_t *DR, const char *broker, uint16_t port)
+uint8_t ec200u_mqtt_open(USART_Handle_t *husart, const char *broker, uint16_t port)
 {
     char cmd[128];
     char response[256];
@@ -408,14 +408,14 @@ uint8_t ec200u_mqtt_open(volatile uint32_t *SR, volatile uint32_t *DR, const cha
     sprintf(cmd, "AT+QMTOPEN=0,\"%s\",%u", broker, port);
 
     /* Send AT command */
-    ec200u_send_cmd(SR, DR, cmd);
+    ec200u_send_cmd(husart->SR, husart->DR, cmd);
 
     memset(response, 0, sizeof(response));
 
     /* Receive response */
     while (index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(husart->SR, husart->DR);
 
         /* Store everything except CR/LF */
         if (ch != '\r' && ch != '\n')
@@ -468,7 +468,7 @@ uint8_t ec200u_mqtt_open(volatile uint32_t *SR, volatile uint32_t *DR, const cha
     return 0U;
 }
 
-uint8_t ec200u_mqtt_connect(volatile uint32_t *SR, volatile uint32_t *DR, const char *client_id, const char *username, const char *password)
+uint8_t ec200u_mqtt_connect(USART_Handle_t *husart, const char *client_id, const char *username, const char *password)
 {
     char cmd[128];
     char response[128];
@@ -486,7 +486,7 @@ uint8_t ec200u_mqtt_connect(volatile uint32_t *SR, volatile uint32_t *DR, const 
     usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSENDING QMTCONN...\r\n");
 
     /* Send command */
-    ec200u_send_cmd(SR, DR, cmd);
+    ec200u_send_cmd(husart->SR, husart->DR, cmd);
 
     usart_tx_str(&USART2_SR, &USART2_DR, "QMTCONN COMMAND SENT\r\n");
 
@@ -497,7 +497,7 @@ uint8_t ec200u_mqtt_connect(volatile uint32_t *SR, volatile uint32_t *DR, const 
      */
     while (index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(husart->SR, husart->DR);
 
         /*
          * ------------------------------------------------
@@ -661,7 +661,7 @@ uint8_t ec200u_mqtt_connect(volatile uint32_t *SR, volatile uint32_t *DR, const 
     return 0U;
 }
 
-uint8_t ec200u_mqtt_publish(volatile uint32_t *SR, volatile uint32_t *DR, const char *topic, const char *message)
+uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const char *message)
 {
     char cmd[256];
     char response[256];
@@ -681,7 +681,7 @@ uint8_t ec200u_mqtt_publish(volatile uint32_t *SR, volatile uint32_t *DR, const 
     usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSENDING MQTT PUBLISH...\r\n");
 
     /* Send command */
-    ec200u_send_cmd(SR, DR, cmd);
+    ec200u_send_cmd(husart->SR, husart->DR, cmd);
 
     usart_tx_str(&USART2_SR, &USART2_DR, "MQTT PUBLISH COMMAND SENT\r\n");
 
@@ -698,7 +698,7 @@ uint8_t ec200u_mqtt_publish(volatile uint32_t *SR, volatile uint32_t *DR, const 
 
     while(index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(husart->SR, husart->DR);
 
         /*
          * Debug: print received character
@@ -749,14 +749,14 @@ uint8_t ec200u_mqtt_publish(volatile uint32_t *SR, volatile uint32_t *DR, const 
      * --------------------------------------------------
      */
 
-    usart_tx_str(SR, DR, message);
+    usart_tx_str(husart->SR, husart->DR, message);
 
     /*
      * CTRL+Z
      *
      * Indicates end of MQTT payload.
      */
-    usart_tx_ch(SR, DR, 0x1A);
+    usart_tx_ch(husart->SR, husart->DR, 0x1A);
 
     usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT MESSAGE SENT\r\n");
 
@@ -773,7 +773,7 @@ uint8_t ec200u_mqtt_publish(volatile uint32_t *SR, volatile uint32_t *DR, const 
 
     while(index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(husart->SR, husart->DR);
 
         response[index++] = ch;
         response[index] = '\0';
@@ -839,7 +839,7 @@ uint8_t ec200u_mqtt_publish(volatile uint32_t *SR, volatile uint32_t *DR, const 
     return 0U;
 }
 
-uint8_t ec200u_mqtt_subscribe(volatile uint32_t *SR, volatile uint32_t *DR, const char *topic, uint8_t qos)
+uint8_t ec200u_mqtt_subscribe(USART_Handle_t *husart, const char *topic, uint8_t qos)
 {
     char cmd[128];
     char response[256];
@@ -856,7 +856,7 @@ uint8_t ec200u_mqtt_subscribe(volatile uint32_t *SR, volatile uint32_t *DR, cons
 
     snprintf(cmd, sizeof(cmd), "AT+QMTSUB=0,1,\"%s\",%u\r\n", topic, qos);
 
-    usart_tx_str(SR, DR, cmd);
+    usart_tx_str(husart->SR, husart->DR, cmd);
 
     /*
      * Debug message
@@ -883,9 +883,9 @@ uint8_t ec200u_mqtt_subscribe(volatile uint32_t *SR, volatile uint32_t *DR, cons
         /*
          * Wait for RX character
          */
-        while (!(*SR & (1U << 5)));
+        while (!(*husart->SR & (1U << 5)));
 
-        ch = (char)(*DR);
+        ch = (char)(*husart->DR);
 
         response[index++] = ch;
         response[index] = '\0';
@@ -944,7 +944,7 @@ uint8_t ec200u_mqtt_subscribe(volatile uint32_t *SR, volatile uint32_t *DR, cons
     return 0U;
 }
 
-uint8_t ec200u_mqtt_receive(volatile uint32_t *SR, volatile uint32_t *DR, char *topic, char *message)
+uint8_t ec200u_mqtt_receive(USART_Handle_t *husart, char *topic, char *message)
 {
     char response[512];
     char *start;
@@ -963,7 +963,7 @@ uint8_t ec200u_mqtt_receive(volatile uint32_t *SR, volatile uint32_t *DR, char *
 
     while (index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(husart->SR, husart->DR);
 
         response[index++] = ch;
         response[index] = '\0';
