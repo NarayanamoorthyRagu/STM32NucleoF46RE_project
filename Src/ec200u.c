@@ -447,15 +447,13 @@ uint8_t ec200u_mqtt_open(volatile uint32_t *SR, volatile uint32_t *DR, const cha
          * +QMTOPEN:0,1
          * +QMTOPEN: 0,1
          */
-        if (strstr(response, "+QMTOPEN:0,") != NULL ||
-            strstr(response, "+QMTOPEN: 0,") != NULL)
+        if (strstr(response, "+QMTOPEN:0,") != NULL || strstr(response, "+QMTOPEN: 0,") != NULL)
         {
             /*
              * We have reached the result.
              * Continue receiving until final digit.
              */
-            if (response[index - 1] >= '0' &&
-                response[index - 1] <= '9')
+            if (response[index - 1] >= '0' && response[index - 1] <= '9')
             {
                 break;
             }
@@ -468,28 +466,17 @@ uint8_t ec200u_mqtt_open(volatile uint32_t *SR, volatile uint32_t *DR, const cha
     if (qmtopen != NULL)
     {
         /* Print only QMTOPEN response */
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     "\r\n");
-
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     qmtopen);
-
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     "\r\n");
+        usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
+        usart_tx_str(&USART2_SR, &USART2_DR, qmtopen);
+        usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
     }
     else
     {
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     "\r\nQMTOPEN response not found\r\n");
+        usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQMTOPEN response not found\r\n");
     }
 
     /* Success */
-    if (strstr(response, "+QMTOPEN:0,0") != NULL ||
-        strstr(response, "+QMTOPEN: 0,0") != NULL)
+    if (strstr(response, "+QMTOPEN:0,0") != NULL || strstr(response, "+QMTOPEN: 0,0") != NULL)
     {
         return 1U;
     }
@@ -497,12 +484,7 @@ uint8_t ec200u_mqtt_open(volatile uint32_t *SR, volatile uint32_t *DR, const cha
     return 0U;
 }
 
-uint8_t ec200u_mqtt_connect(
-    volatile uint32_t *SR,
-    volatile uint32_t *DR,
-    const char *client_id,
-    const char *username,
-    const char *password)
+uint8_t ec200u_mqtt_connect(volatile uint32_t *SR, volatile uint32_t *DR, const char *client_id, const char *username, const char *password)
 {
     char cmd[128];
     char response[128];
@@ -515,22 +497,14 @@ uint8_t ec200u_mqtt_connect(
     uint8_t comma_count = 0U;
 
     /* Create QMTCONN command */
-    sprintf(cmd,
-            "AT+QMTCONN=0,\"%s\",\"%s\",\"%s\"",
-            client_id,
-            username,
-            password);
+    sprintf(cmd, "AT+QMTCONN=0,\"%s\",\"%s\",\"%s\"", client_id, username, password);
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "\r\nSENDING QMTCONN...\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSENDING QMTCONN...\r\n");
 
     /* Send command */
     ec200u_send_cmd(SR, DR, cmd);
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "QMTCONN COMMAND SENT\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "QMTCONN COMMAND SENT\r\n");
 
     memset(response, 0, sizeof(response));
 
@@ -549,25 +523,18 @@ uint8_t ec200u_mqtt_connect(
          */
         if (ok_received == 0U)
         {
-            static char ok_buffer[3];
             static uint8_t ok_index = 0U;
 
             if (ch == 'O')
             {
-                ok_buffer[0] = 'O';
                 ok_index = 1U;
             }
             else if (ch == 'K' && ok_index == 1U)
             {
-                ok_buffer[1] = 'K';
-                ok_buffer[2] = '\0';
-
                 ok_received = 1U;
                 ok_index = 0U;
 
-                usart_tx_str(&USART2_SR,
-                             &USART2_DR,
-                             "OK RECEIVED\r\n");
+                usart_tx_str(&USART2_SR, &USART2_DR, "OK RECEIVED\r\n");
             }
             else
             {
@@ -653,10 +620,7 @@ uint8_t ec200u_mqtt_connect(
                 /*
                  * Check complete successful response
                  */
-                if (strstr(response,
-                           "+QMTCONN:0,0,0") != NULL ||
-                    strstr(response,
-                           "+QMTCONN: 0,0,0") != NULL)
+                if (strstr(response, "+QMTCONN:0,0,0") != NULL || strstr(response, "+QMTCONN: 0,0,0") != NULL)
                 {
                     break;
                 }
@@ -669,9 +633,7 @@ uint8_t ec200u_mqtt_connect(
                  * +QMTCONN: 0,3,0
                  * +QMTCONN: 0,5,0
                  */
-                if (index >= 1U &&
-                    response[index - 1] >= '0' &&
-                    response[index - 1] <= '9')
+                if (index >= 1U && response[index - 1] >= '0' && response[index - 1] <= '9')
                 {
                     break;
                 }
@@ -685,17 +647,11 @@ uint8_t ec200u_mqtt_connect(
      * ------------------------------------------------
      */
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "\r\nQMTCONN Response:\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQMTCONN Response:\r\n");
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 response);
+    usart_tx_str(&USART2_SR, &USART2_DR, response);
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
 
     /*
      * ------------------------------------------------
@@ -703,12 +659,9 @@ uint8_t ec200u_mqtt_connect(
      * ------------------------------------------------
      */
 
-    if (strstr(response, "+QMTCONN:0,0,0") != NULL ||
-        strstr(response, "+QMTCONN: 0,0,0") != NULL)
+    if (strstr(response, "+QMTCONN:0,0,0") != NULL ||  strstr(response, "+QMTCONN: 0,0,0") != NULL)
     {
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     "MQTT CONNECTION SUCCESS\r\n");
+        usart_tx_str(&USART2_SR, &USART2_DR, "MQTT CONNECTION SUCCESS\r\n");
 
         return 1U;
     }
@@ -719,18 +672,12 @@ uint8_t ec200u_mqtt_connect(
      * ------------------------------------------------
      */
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "MQTT CONNECTION FAILED\r\n");
+    usart_tx_str(&USART2_SR,  &USART2_DR, "MQTT CONNECTION FAILED\r\n");
 
     return 0U;
 }
 
-uint8_t ec200u_mqtt_publish(
-    volatile uint32_t *SR,
-    volatile uint32_t *DR,
-    const char *topic,
-    const char *message)
+uint8_t ec200u_mqtt_publish(volatile uint32_t *SR, volatile uint32_t *DR, const char *topic, const char *message)
 {
     char cmd[256];
     char response[256];
@@ -745,20 +692,14 @@ uint8_t ec200u_mqtt_publish(
      * QoS          = 0
      * retain       = 0
      */
-    sprintf(cmd,
-            "AT+QMTPUB=0,0,0,0,\"%s\"",
-            topic);
+    sprintf(cmd, "AT+QMTPUB=0,0,0,0,\"%s\"", topic);
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "\r\nSENDING MQTT PUBLISH...\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSENDING MQTT PUBLISH...\r\n");
 
     /* Send command */
     ec200u_send_cmd(SR, DR, cmd);
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "MQTT PUBLISH COMMAND SENT\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT PUBLISH COMMAND SENT\r\n");
 
     /*
      * --------------------------------------------------
@@ -778,9 +719,7 @@ uint8_t ec200u_mqtt_publish(
         /*
          * Debug: print received character
          */
-        usart_tx_ch(&USART2_SR,
-                    &USART2_DR,
-                    ch);
+        usart_tx_ch(&USART2_SR, &USART2_DR, ch);
 
         /*
          * Store character
@@ -793,9 +732,7 @@ uint8_t ec200u_mqtt_publish(
          */
         if(ch == '>')
         {
-            usart_tx_str(&USART2_SR,
-                         &USART2_DR,
-                         "\r\nPUBLISH PROMPT RECEIVED\r\n");
+            usart_tx_str(&USART2_SR, &USART2_DR, "\r\nPUBLISH PROMPT RECEIVED\r\n");
 
             break;
         }
@@ -805,9 +742,7 @@ uint8_t ec200u_mqtt_publish(
          */
         if(strstr(response, "ERROR") != NULL)
         {
-            usart_tx_str(&USART2_SR,
-                         &USART2_DR,
-                         "\r\nMQTT PUBLISH COMMAND ERROR\r\n");
+            usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT PUBLISH COMMAND ERROR\r\n");
 
             return 0U;
         }
@@ -818,9 +753,7 @@ uint8_t ec200u_mqtt_publish(
      */
     if(strchr(response, '>') == NULL)
     {
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     "\r\nPUBLISH PROMPT NOT RECEIVED\r\n");
+        usart_tx_str(&USART2_SR, &USART2_DR, "\r\nPUBLISH PROMPT NOT RECEIVED\r\n");
 
         return 0U;
     }
@@ -832,22 +765,16 @@ uint8_t ec200u_mqtt_publish(
      * --------------------------------------------------
      */
 
-    usart_tx_str(SR,
-                 DR,
-                 message);
+    usart_tx_str(SR, DR, message);
 
     /*
      * CTRL+Z
      *
      * Indicates end of MQTT payload.
      */
-    usart_tx_ch(SR,
-                DR,
-                0x1A);
+    usart_tx_ch(SR, DR, 0x1A);
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "\r\nMQTT MESSAGE SENT\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT MESSAGE SENT\r\n");
 
     /*
      * --------------------------------------------------
@@ -876,12 +803,9 @@ uint8_t ec200u_mqtt_publish(
          *
          * +QMTPUB:0,0,0
          */
-        if(strstr(response, "+QMTPUB: 0,0,0") != NULL ||
-           strstr(response, "+QMTPUB:0,0,0") != NULL)
+        if(strstr(response, "+QMTPUB: 0,0,0") != NULL || strstr(response, "+QMTPUB:0,0,0") != NULL)
         {
-            usart_tx_str(&USART2_SR,
-                         &USART2_DR,
-                         "\r\nMQTT PUBLISH SUCCESS\r\n");
+            usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT PUBLISH SUCCESS\r\n");
 
             return 1U;
         }
@@ -912,27 +836,18 @@ uint8_t ec200u_mqtt_publish(
      * --------------------------------------------------
      */
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "\r\nMQTT PUBLISH Response:\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT PUBLISH Response:\r\n");
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 response);
+    usart_tx_str(&USART2_SR, &USART2_DR, response);
 
-    usart_tx_str(&USART2_SR,
-                 &USART2_DR,
-                 "\r\n");
+    usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
 
     /*
      * Check success one more time.
      */
-    if(strstr(response, "+QMTPUB: 0,0,0") != NULL ||
-       strstr(response, "+QMTPUB:0,0,0") != NULL)
+    if(strstr(response, "+QMTPUB: 0,0,0") != NULL ||  strstr(response, "+QMTPUB:0,0,0") != NULL)
     {
-        usart_tx_str(&USART2_SR,
-                     &USART2_DR,
-                     "MQTT PUBLISH SUCCESS\r\n");
+        usart_tx_str(&USART2_SR, &USART2_DR, "MQTT PUBLISH SUCCESS\r\n");
 
         return 1U;
     }
@@ -940,11 +855,7 @@ uint8_t ec200u_mqtt_publish(
     return 0U;
 }
 
-uint8_t ec200u_mqtt_subscribe(
-        volatile uint32_t *SR,
-        volatile uint32_t *DR,
-        const char *topic,
-        uint8_t qos)
+uint8_t ec200u_mqtt_subscribe(volatile uint32_t *SR, volatile uint32_t *DR, const char *topic, uint8_t qos)
 {
     char cmd[128];
     char response[256];
@@ -959,18 +870,14 @@ uint8_t ec200u_mqtt_subscribe(
      * ---------------------------------------------------------
      */
 
-    snprintf(cmd,
-             sizeof(cmd),
-             "AT+QMTSUB=0,1,\"%s\",%u\r\n",
-             topic,
-             qos);
+    snprintf(cmd, sizeof(cmd), "AT+QMTSUB=0,1,\"%s\",%u\r\n", topic, qos);
 
     usart_tx_str(SR, DR, cmd);
 
     /*
      * Debug message
      */
-    usart_tx_str(SR, DR, "MQTT SUBSCRIBE COMMAND SENT\r\n");
+    usart_tx_str(&USART2_SR,&USART2_DR, "MQTT SUBSCRIBE COMMAND SENT\r\n");
 
     /*
      * ---------------------------------------------------------
@@ -1024,8 +931,8 @@ uint8_t ec200u_mqtt_subscribe(
 
     response[index] = '\0';
 
-    usart_tx_str(SR, DR,"MQTT SUBSCRIBE Response:\r\n");
-    usart_tx_str(SR, DR, response);
+    usart_tx_str(&USART2_SR,&USART2_DR,"MQTT SUBSCRIBE Response:\r\n");
+    usart_tx_str(&USART2_SR,&USART2_DR, response);
 
     /*
      * ---------------------------------------------------------
@@ -1040,23 +947,20 @@ uint8_t ec200u_mqtt_subscribe(
 
     if (strstr(response, "+QMTSUB: 0,1,0") != NULL)
     {
-    	usart_tx_str(SR, DR,"MQTT SUBSCRIBE SUCCESS\r\n");
+    	usart_tx_str(&USART2_SR,&USART2_DR,"MQTT SUBSCRIBE SUCCESS\r\n");
+    	usart_tx_str(&USART2_SR,&USART2_DR,topic);
         return 1U;
     }
 
     /*
      * Any other result is failure.
      */
-    usart_tx_str(SR, DR,"MQTT SUBSCRIBE FAILED\r\n");
+    usart_tx_str(&USART2_SR,&USART2_DR,"MQTT SUBSCRIBE FAILED\r\n");
 
     return 0U;
 }
 
-uint8_t ec200u_mqtt_receive(
-        volatile uint32_t *SR,
-        volatile uint32_t *DR,
-        char *topic,
-        char *message)
+uint8_t ec200u_mqtt_receive(volatile uint32_t *SR, volatile uint32_t *DR, char *topic, char *message)
 {
     char response[512];
     char *start;
@@ -1170,6 +1074,76 @@ uint8_t ec200u_mqtt_receive(
     message[end - start] = '\0';
 
     return 1U;
+}
+
+uint8_t ec200u_mqtt_disconnect(volatile uint32_t *SR, volatile uint32_t *DR)
+{
+    char response[128];
+    uint32_t index = 0;
+    char ch;
+
+    usart_tx_str(&USART2_SR, &USART2_DR, "SENDING MQTT DISCONNECT...\r\n");
+
+    usart_tx_str(SR, DR, "AT+QMTDISC=0\r");
+
+    while (index < (sizeof(response) - 1U))
+    {
+        ch = usart_rx_ch(SR, DR);
+
+        response[index++] = ch;
+        response[index] = '\0';
+
+        if (strstr(response, "+QMTDISC: 0,0") != NULL)
+        {
+            usart_tx_str(&USART2_SR, &USART2_DR, "MQTT DISCONNECT SUCCESS\r\n");
+
+            return 1U;
+        }
+
+        if (strstr(response, "ERROR") != NULL)
+        {
+            break;
+        }
+    }
+
+    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT DISCONNECT FAILED\r\n");
+
+    return 0U;
+}
+
+uint8_t ec200u_mqtt_close(volatile uint32_t *SR, volatile uint32_t *DR)
+{
+    char response[128];
+    uint32_t index = 0;
+    char ch;
+
+    usart_tx_str(&USART2_SR, &USART2_DR, "SENDING MQTT CLOSE...\r\n");
+
+    usart_tx_str(SR, DR, "AT+QMTCLOSE=0\r");
+
+    while(index < (sizeof(response) - 1U))
+    {
+        ch = usart_rx_ch(SR, DR);
+
+        response[index++] = ch;
+        response[index] = '\0';
+
+        if(strstr(response, "+QMTCLOSE: 0,0") != NULL)
+        {
+            usart_tx_str(&USART2_SR, &USART2_DR, "MQTT CLOSE SUCCESS\r\n");
+
+            return 1U;
+        }
+
+        if(strstr(response, "ERROR") != NULL)
+        {
+            break;
+        }
+    }
+
+    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT CLOSE FAILED\r\n");
+
+    return 0U;
 }
 
 

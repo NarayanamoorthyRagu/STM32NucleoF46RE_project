@@ -48,6 +48,10 @@ uint8_t ec200u_mqtt_subscribe(volatile uint32_t*, volatile uint32_t*, const char
 
 uint8_t ec200u_mqtt_receive(volatile uint32_t*, volatile uint32_t*, char*, char*);
 
+uint8_t ec200u_mqtt_disconnect(volatile uint32_t*, volatile uint32_t*);
+
+uint8_t ec200u_mqtt_close(volatile uint32_t*, volatile uint32_t*);
+
 uint8_t ec200u_send_and_wait(volatile uint32_t*, volatile uint32_t*, const char*, char*);
 
 void ec200u_send_cmd(volatile uint32_t*, volatile uint32_t*,const char*);
