@@ -55,8 +55,14 @@ uint8_t ec200u_mqtt_disconnect(USART_Handle_t*);
 
 uint8_t ec200u_mqtt_close(USART_Handle_t*);
 
-uint8_t ec200u_send_and_wait(volatile uint32_t*, volatile uint32_t*, const char*, char*);
+uint8_t ec200u_send_and_wait(USART_Handle_t*, const char*, char*);
 
-void ec200u_send_cmd(volatile uint32_t*, volatile uint32_t*,const char*);
+void ec200u_send_cmd(USART_Handle_t*, const char*);
+
+void ec200u_test_with_mqtt();
+
+uint8_t ec200u_init(USART_Handle_t*);
+
+uint8_t ec200u_mqtt_init(USART_Handle_t*);
 
 #endif

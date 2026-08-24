@@ -55,221 +55,41 @@ int main(void)
 	//adc_interrupt();
 	//uint8_t prev_status = 1;
 	//uint8_t led_status = 1;
-	tim2_delay(2000);
-	char imei[128];
-	char operator_name[128];
-	uint8_t signal;
-	char iccid[32];
-	char network[128];
-	char version[128];
-	char ip_addr[32];
+	//ec200u_test_with_mqtt();
 
-	/* Reset Module */
-	while(!ec200u_reset_module(&USART1))
+	usart_tx_str(&USART2, "\r\nSTM32 EC200U STARTING...\r\n");
+
+	/* Initialize EC200U modem */
+	if (!ec200u_init(&USART1))
 	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM NOT RESET - Retrying...\r\n");
-	    tim2_delay(5000);
+		usart_tx_str(&USART2, "\r\nEC200U INIT FAILED\r\n");
+
+	        while (1)
+	        {
+	            /* Retry / error handling */
+	        }
 	}
 
-	usart_tx_str(&USART2_SR, &USART2_DR,  "\r\nMODEM RESET\r\n");
-	tim2_delay(7000);
+	usart_tx_str(&USART2, "\r\nEC200U INIT SUCCESS\r\n");
 
-	/* Check AT */
-	while(!ec200u_check_module(&USART1))
+
+	/* Initialize MQTT */
+	if (!ec200u_mqtt_init(&USART1))
 	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
+	        usart_tx_str(&USART2, "\r\nMQTT INIT FAILED\r\n");
+	        while (1)
+	        {
+	            /* Retry / error handling */
+	        }
 	}
 
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMODEM OK\r\n");
-	tim2_delay(1000);
-
-	/* Check SIM */
-	while(!ec200u_check_sim(&USART1))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSIM FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSIM OK\r\n");
-	tim2_delay(1000);
-
-	/* Check Network */
-	while(!ec200u_check_network(&USART1))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nNETWORK FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nNETWORK OK\r\n");
-	tim2_delay(1000);
-
-	/* IMEI */
-	while(!ec200u_get_imei(&USART1, imei))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nIMEI READ FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nIMEI: ");
-	usart_tx_str(&USART2_SR, &USART2_DR, imei);
-	tim2_delay(1000);
-
-	/* Operator */
-	while(!ec200u_get_operator(&USART1, operator_name))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nOPERATOR FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nOperator: ");
-	usart_tx_str(&USART2_SR, &USART2_DR, operator_name);
-	tim2_delay(1000);
-
-	/* Signal */
-	while(!ec200u_get_signal(&USART1, &signal))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSIGNAL FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSignal: ");
-	usart_tx_uint(&USART2_SR, &USART2_DR, signal);
-	tim2_delay(1000);
-
-	/* ICCID */
-	while(!ec200u_get_iccid(&USART1, iccid))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nICCID FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nICCID: ");
-	usart_tx_str(&USART2_SR, &USART2_DR, iccid);
-	tim2_delay(1000);
-	/* Network Info */
-
-	while(!ec200u_get_network_info(&USART1, network))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nNETWORK INFO FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nNetwork Info: ");
-
-	usart_tx_str(&USART2_SR, &USART2_DR, network);
-
-	tim2_delay(1000);
-
-	/* Firmware */
-	while(!ec200u_get_firmware(&USART1, version))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nFIRMWARE FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nFirmware: ");
-	usart_tx_str(&USART2_SR, &USART2_DR, version);
-	tim2_delay(1000);
-
-	/* APN */
-	while(!ec200u_set_apn(&USART1, "jionet"))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nAPN FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nAPN OK\r\n");
-	tim2_delay(1000);
-
-	/* PDP Activate */
-	while(!ec200u_activate_pdp(&USART1))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nPDP FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nPDP ACTIVATED\r\n");
-	tim2_delay(1000);
-
-	/* Get IP */
-	while(!ec200u_get_ip(&USART1, ip_addr))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nIP FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nIP Address: ");
-	usart_tx_str(&USART2_SR, &USART2_DR, ip_addr);
-	tim2_delay(1000);
-
-	/* MQTT Version */
-	while(!ec200u_set_mqtt_version(&USART1))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT VERSION FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT VERSION SET\r\n");
-	tim2_delay(1000);
-
-	/* MQTT Open */
-	while(!ec200u_mqtt_open(&USART1, "broker.hivemq.com", 1883))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT OPEN FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT CONNECTION OPENED\r\n");
-	tim2_delay(1000);
-
-	char client_id[32];
-
-	srand(12345);   // Seed once during initialization
-
-	uint32_t random_number = 10000U + (rand() % 90000U);
-
-	snprintf(client_id, sizeof(client_id),"stm32%lu", (unsigned long)random_number);
-
-	/* MQTT Connect */
-	while(!ec200u_mqtt_connect(&USART1, client_id,"",""))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT CONNECT FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT CONNECTED\r\n");
-	tim2_delay(1000);
-
-	while(!ec200u_mqtt_subscribe(&USART1, "stm32/command", 0))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT SUBSCRIBE FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT SUBSCRIBED\r\n");
-
-	while(!ec200u_mqtt_publish(&USART1, "stm32/status", "Hello from STM32"))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT PUBLISH FAIL - Retrying...\r\n");
-	    tim2_delay(5000);
-	}
-
-	usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT MESSAGE PUBLISHED\r\n");
-
-	if(ec200u_mqtt_disconnect(&USART1))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT DISCONNECTED\r\n");
-	}
-
-	if(ec200u_mqtt_close(&USART1))
-	{
-	    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT SOCKET CLOSED\r\n");
-	}
+	usart_tx_str(&USART2, "\r\nMQTT INIT SUCCESS\r\n");
 
 
-	char topic[128];
-	char message[256];
+
+
+//	char topic[128];
+//	char message[256];
 	while (1)
 	{
 //****************Toggle led*******************//
@@ -282,83 +102,84 @@ int main(void)
 
 //		gpioa_digitalWrite(5, HIGH);
 //		gpioa_digitalWrite(6, HIGH);
-//		usart_tx_uint(&USART2_SR, &USART2_DR, 1);
-//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
-//		usart_tx_str(&USART2_SR, &USART2_DR, "LEDON");
-//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//		usart_tx_uint(&USART2, 1);
+//		usart_tx_ch(&USART2, '\n');
+//		usart_tx_str(&USART2, "LEDON");
+//		usart_tx_ch(&USART2, '\n');
 //		tim2_delay(1000);
 //		gpioa_digitalWrite(5, LOW);
 //		gpioa_digitalWrite(6, LOW);
-//		usart_tx_uint(&USART2_SR, &USART2_DR, 0);
-//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
-//		usart_tx_str(&USART2_SR, &USART2_DR, "LEDOFF");
-//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//		usart_tx_uint(&USART2, 0);
+//		usart_tx_ch(&USART2, '\n');
+//		usart_tx_str(&USART2, "LEDOFF");
+//		usart_tx_ch(&USART2, '\n');
 //		tim2_delay(1000);
 
 //******Receive char data from serial usart2************//
-
-//		char rev_ch = usart_rx_ch(&USART2_SR, &USART2_DR);
-//		usart_tx_ch(&USART2_SR, &USART2_DR, rev_ch);
-//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//		if(usart_available(&USART2)){
+//		char rev_ch = usart_rx_ch(&USART2);
+//		usart_tx_ch(&USART2, rev_ch);
+//		usart_tx_ch(&USART2, '\n');
 //		if(rev_ch=='A')
 //		{
 //			gpioa_digitalWrite(5, HIGH);
 //			gpioa_digitalWrite(6, HIGH);
-//			usart_tx_uint(&USART2_SR, &USART2_DR, 1);
-//			usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
-//			usart_tx_str(&USART2_SR, &USART2_DR, "LEDON");
-//			usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//			usart_tx_uint(&USART2, 1);
+//			usart_tx_ch(&USART2, '\n');
+//			usart_tx_str(&USART2, "LEDON");
+//			usart_tx_ch(&USART2, '\n');
 //			tim2_delay(1000);
 //		}
 //		else if(rev_ch=='B')
 //		{
 //			gpioa_digitalWrite(5, LOW);
 //			gpioa_digitalWrite(6, LOW);
-//			usart_tx_uint(&USART2_SR, &USART2_DR, 0);
-//			usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
-//			usart_tx_str(&USART2_SR, &USART2_DR, "LEDOFF");
-//			usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//			usart_tx_uint(&USART2, 0);
+//			usart_tx_ch(&USART2, '\n');
+//			usart_tx_str(&USART2, "LEDOFF");
+//			usart_tx_ch(&USART2, '\n');
 //			tim2_delay(1000);
 //		}
 //		else
 //		{
-//			usart_tx_str(&USART2_SR, &USART2_DR, "Unknown Command");
+//			usart_tx_str(&USART2, "Unknown Command");
+//		}
 //		}
 
 //******Receive string data from serial usart2**********//
 
-//		usart_rx_str(&USART2_SR, &USART2_DR, buffer);
-//		usart_tx_str(&USART2_SR, &USART2_DR, "Received:");
-//		usart_tx_str(&USART2_SR, &USART2_DR, buffer);
-//		usart_tx_ch(&USART2_SR, &USART2_DR, '\n');
+//		usart_rx_str(&USART2, buffer);
+//		usart_tx_str(&USART2, "Received:");
+//		usart_tx_str(&USART2, buffer);
+//		usart_tx_ch(&USART2, '\n');
 //
 //		if (strcmp(buffer, "LEDON") == 0)
 //		{
 //			gpioa_digitalWrite(5, HIGH);
 //		    gpioa_digitalWrite(6, HIGH);
-//		    usart_tx_str(&USART2_SR, &USART2_DR, "LED IS ON\n");
+//		    usart_tx_str(&USART2, "LED IS ON\n");
 //		}
 //		else if (strcmp(buffer, "LEDOFF") == 0)
 //		{
 //		    gpioa_digitalWrite(5, LOW);
 //		    gpioa_digitalWrite(6, LOW);
-//		    usart_tx_str(&USART2_SR, &USART2_DR, "LED IS OFF\n");
+//		    usart_tx_str(&USART2, "LED IS OFF\n");
 //		}
 //		else
 //		{
-//			usart_tx_str(&USART2_SR, &USART2_DR, "Unknown Command");
+//			usart_tx_str(&USART2, "Unknown Command");
 //		}
 
 //**********Read input pin*********************//
 
 //	    uint8_t current_status = gpioc_digitalRead(13);
-//		usart_tx_uint(&USART2_SR, &USART2_DR, current_status);
+//		usart_tx_uint(&USART2, current_status);
 //	    if (current_status != prev_status)
 //	    {
 //	        if (!current_status)
 //	        {
 //	        	gpioa_digitalWrite(5, led_status);
-//	            (led_status) ? usart_tx_str(&USART2_SR, &USART2_DR, "LED IS ON"):usart_tx_str(&USART2_SR, &USART2_DR, "LED IS OFF");
+//	            (led_status) ? usart_tx_str(&USART2, "LED IS ON"):usart_tx_str(&USART2, "LED IS OFF");
 //	            led_status = !led_status;
 //	            tim2_delay(1000);
 //	        }
@@ -368,7 +189,7 @@ int main(void)
 //*********Read analog pin using ADC1**********//
 
 //		uint16_t sensor_data = adc_read();
-//		usart_tx_uint(&USART2_SR, &USART2_DR, sensor_data);
+//		usart_tx_uint(&USART2, sensor_data);
 //		if(sensor_data > 3000){
 //			gpioa_digitalWrite(5, HIGH);
 //		}
@@ -383,44 +204,44 @@ int main(void)
 
 //******Write pwm value***********************//
 
-		PWM_val = usart_rx_uint(&USART2_SR, &USART2_DR);
-		usart_tx_str(&USART2_SR, &USART2_DR, "Received:");
-		usart_tx_uint(&USART2_SR, &USART2_DR, PWM_val);
-	    gpiob_pwm_write(0, PWM_val);
-		tim2_delay(1000);
+//		PWM_val = usart_rx_uint(&USART2);
+//		usart_tx_str(&USART2, "Received:");
+//		usart_tx_uint(&USART2, PWM_val);
+//	    gpiob_pwm_write(0, PWM_val);
+//		tim2_delay(1000);
 
-		ec200u_mqtt_receive(&USART1, topic, message);
-
-		if (strcmp(message, "LEDON") == 0)
-		{
-			gpioa_digitalWrite(5, HIGH);
-			usart_tx_str(&USART2_SR, &USART2_DR, "LED IS ON\r\n");
-		}
-		else if (strcmp(message, "LEDOFF") == 0)
-		{
-			gpioa_digitalWrite(5, LOW);
-			usart_tx_str(&USART2_SR, &USART2_DR, "LED IS OFF\r\n");
-		}
+//		ec200u_mqtt_receive(&USART1, topic, message);
+//
+//		if (strcmp(message, "LEDON") == 0)
+//		{
+//			gpioa_digitalWrite(5, HIGH);
+//			usart_tx_str(&USART2, "LED IS ON\r\n");
+//		}
+//		else if (strcmp(message, "LEDOFF") == 0)
+//		{
+//			gpioa_digitalWrite(5, LOW);
+//			usart_tx_str(&USART2, "LED IS OFF\r\n");
+//		}
 
 //************************GSM***********************//
 
 		// PC -> GSM
-//		char ch;
-//
+		char ch;
+
 //		/* PC -> GSM */
-//		if(usart_available(&USART2_SR))
-//		{
-//		    ch = usart_rx_ch(&USART2_SR, &USART2_DR);
-//
-//		    usart_tx_ch(&USART1_SR, &USART1_DR, ch);
-//		}
-//
-//		/* GSM -> PC */
-//		if(usart_available(&USART1_SR))
-//		{
-//		    ch = usart_rx_ch(&USART1_SR, &USART1_DR);
-//
-//		    usart_tx_ch(&USART2_SR, &USART2_DR, ch);
-//		}
+		if(usart_available(&USART2))
+		{
+		    ch = usart_rx_ch(&USART2);
+
+		    usart_tx_ch(&USART1, ch);
+		}
+
+		/* GSM -> PC */
+		if(usart_available(&USART1))
+		{
+		    ch = usart_rx_ch(&USART1);
+
+		    usart_tx_ch(&USART2, ch);
+		}
 	}
 }

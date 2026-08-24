@@ -24,6 +24,9 @@ USART_Handle_t USART2 =
     .DR = &USART2_DR
 };
 
+//USART_Handle_t USART1 = {&USART1_SR, &USART1_DR};
+//USART_Handle_t USART2 = {&USART2_SR, &USART2_DR};
+
 void usart1_init(uint32_t baudrate)
 {
 
@@ -51,9 +54,9 @@ void usart1_init(uint32_t baudrate)
 
 }
 
-uint8_t usart_available(volatile uint32_t *SR)
+uint8_t usart_available(USART_Handle_t* uart)
 {
-	return *SR & (1U << 5);
+	return (*(uart->SR) & (1U << 5)) ? 1 : 0;
 }
 
 void usart2_init(uint32_t baudrate)
@@ -83,21 +86,21 @@ void usart2_init(uint32_t baudrate)
 
 }
 
-void usart_tx_ch(volatile uint32_t *SR, volatile uint32_t *DR, char ch)
+void usart_tx_ch(USART_Handle_t* uart, char ch)
 {
 
-		while(!(*SR & (1U<<7))); //Wait until TXE bit is 1
+		while(!(*(uart->SR) & (1U<<7))); //Wait until TXE bit is 1
 
-		*DR = ch; //assign data register to required character
+		*(uart->DR) = ch; //assign data register to required character
 
 }
 
-void usart_tx_str(volatile uint32_t *SR, volatile uint32_t *DR, const char *str)
+void usart_tx_str(USART_Handle_t* uart, const char *str)
 {
 
     while (*str) {           // Loop until null terminator
 
-    	usart_tx_ch(SR, DR, *str); // Send current character
+    	usart_tx_ch(uart, *str); // Send current character
 
         str++;               // Move to next character
 
@@ -105,7 +108,7 @@ void usart_tx_str(volatile uint32_t *SR, volatile uint32_t *DR, const char *str)
 
 }
 
-void usart_tx_uint(volatile uint32_t *SR, volatile uint32_t *DR, uint32_t num)
+void usart_tx_uint(USART_Handle_t* uart, uint32_t num)
 {
 
     char buf[11];
@@ -115,9 +118,9 @@ void usart_tx_uint(volatile uint32_t *SR, volatile uint32_t *DR, uint32_t num)
     if (num == 0)
     {
 
-    	usart_tx_ch(SR, DR, '0'); // Send current character
+    	usart_tx_ch(uart, '0'); // Send current character
 
-    	usart_tx_ch(SR, DR, '\n'); // Send current character
+    	usart_tx_ch(uart, '\n'); // Send current character
 
         return;
 
@@ -135,24 +138,24 @@ void usart_tx_uint(volatile uint32_t *SR, volatile uint32_t *DR, uint32_t num)
     while (i > 0)
     {
 
-        usart_tx_ch(SR, DR, buf[--i]); // Send current character
+    	usart_tx_ch(uart, buf[--i]); // Send current character
 
     }
 
-    usart_tx_ch(SR, DR, '\n'); // Send current character
+    usart_tx_ch(uart, '\n'); // Send current character
 
 }
 
-char usart_rx_ch(volatile uint32_t *SR, volatile uint32_t *DR)
+char usart_rx_ch(USART_Handle_t* uart)
 {
 
-	while(!(*SR & (1U<<5))); //Wait until RXEN is set
+	while(!(*(uart->SR) & (1U<<5))); //Wait until RXEN is set
 
-	return (char)*DR; //return received character
+	return (char)*(uart->DR); //return received character
 
 }
 
-void usart_rx_str(volatile uint32_t *SR, volatile uint32_t *DR, char *buffer)
+void usart_rx_str(USART_Handle_t* uart, char *buffer)
 {
     uint32_t i = 0;
 
@@ -160,7 +163,7 @@ void usart_rx_str(volatile uint32_t *SR, volatile uint32_t *DR, char *buffer)
 
     while (1)
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(uart);
 
         if (ch == '\r' || ch == '\n')
         {
@@ -175,13 +178,13 @@ void usart_rx_str(volatile uint32_t *SR, volatile uint32_t *DR, char *buffer)
     }
 }
 
-uint32_t usart_rx_uint(volatile uint32_t *SR, volatile uint32_t *DR)
+uint32_t usart_rx_uint(USART_Handle_t* uart)
 {
     char buffer[12];
     uint32_t value = 0;
     uint32_t i = 0;
 
-    usart_rx_str(SR, DR, buffer);
+    usart_rx_str(uart, buffer);
 
     while (buffer[i] != '\0')
     {

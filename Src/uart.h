@@ -14,19 +14,19 @@ void usart1_init(uint32_t baudrate);
 
 void usart2_init(uint32_t baudrate);
 
-uint8_t usart_available(volatile uint32_t*);
+uint8_t usart_available(USART_Handle_t*);
 
-void usart_tx_ch(volatile uint32_t*, volatile uint32_t*, char);
+void usart_tx_ch(USART_Handle_t*, char);
 
-void usart_tx_str(volatile uint32_t*, volatile uint32_t*, const char*);
+void usart_tx_str(USART_Handle_t*, const char*);
 
-void usart_tx_uint(volatile uint32_t*, volatile uint32_t*, uint32_t);
+void usart_tx_uint(USART_Handle_t*, uint32_t);
 
-char usart_rx_ch(volatile uint32_t*, volatile uint32_t*);
+char usart_rx_ch(USART_Handle_t*);
 
-void usart_rx_str(volatile uint32_t*, volatile uint32_t*, char*);
+void usart_rx_str(USART_Handle_t*, char*);
 
-uint32_t usart_rx_uint(volatile uint32_t*, volatile uint32_t*);
+uint32_t usart_rx_uint(USART_Handle_t*);
 
 void usart1_rx_interrupt(void);
 

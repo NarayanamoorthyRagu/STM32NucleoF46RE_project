@@ -46,11 +46,11 @@ void EXTI15_10_IRQHandler(void)
 
         if (led_status)
 
-        	usart_tx_str(&USART2_SR, &USART2_DR,"Led_on\r\n");
+        	usart_tx_str(&USART2,"Led_on\r\n");
 
         else
 
-        	usart_tx_str(&USART2_SR, &USART2_DR,"Led_off\r\n");
+        	usart_tx_str(&USART2,"Led_off\r\n");
 
         led_status = !led_status;
     }

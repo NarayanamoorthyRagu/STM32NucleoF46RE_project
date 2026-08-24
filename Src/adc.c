@@ -88,7 +88,7 @@ void ADC_IRQHandler(void)
 	if((ADC_SR & (1U << 1))) // Wait until End Of Conversion (EOC) flag is set
 	{
 
-		usart_tx_uint(&USART2_SR, &USART2_DR, (uint16_t)ADC_DR); //Print the ADC value in USART2
+		usart_tx_uint(&USART2, (uint16_t)ADC_DR); //Print the ADC value in USART2
 
 		tim2_delay(1000);
 

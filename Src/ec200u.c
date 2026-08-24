@@ -7,30 +7,39 @@
 #include "ec200u.h"
 #include "platform.h"
 #include "uart.h"
+#include "timer.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+char imei[128];
+char operator_name[128];
+uint8_t Signal;
+char iccid[32];
+char network[128];
+char version[128];
+char ip_addr[32];
 
 uint8_t ec200u_check_module(USART_Handle_t *husart)
 {
     char response[128];
 
     // Pass the SR and DR from the handle
-    return ec200u_send_and_wait(husart->SR, husart->DR, "AT", response);
+    return ec200u_send_and_wait(husart, "AT", response);
 }
 
 uint8_t ec200u_reset_module(USART_Handle_t *husart)
 {
 	char response[128];
 
-	return ec200u_send_and_wait(husart->SR, husart->DR, "AT+CFUN=1,1", response);
+	return ec200u_send_and_wait(husart, "AT+CFUN=1,1", response);
 }
 
 uint8_t ec200u_check_sim(USART_Handle_t *husart)
 {
     char response[128];
 
-    if(ec200u_send_and_wait(husart->SR, husart->DR, "AT+CPIN?", response))
+    if(ec200u_send_and_wait(husart, "AT+CPIN?", response))
     {
         if(strstr(response, "READY") != NULL)
         {
@@ -45,13 +54,68 @@ uint8_t ec200u_check_network(USART_Handle_t *husart)
 {
     char response[128];
 
-    if(ec200u_send_and_wait(husart->SR, husart->DR, "AT+CREG?", response))
+    for (uint8_t retry = 0U; retry < 30U; retry++)
     {
-        if((strstr(response, "+CREG: 0,1") != NULL) || (strstr(response, "+CREG: 0,5") != NULL))
+        memset(response, 0, sizeof(response));
+
+        usart_tx_str(&USART2, "\r\nChecking network...\r\n");
+
+        if (ec200u_send_and_wait(husart,
+                                 "AT+CEREG?",
+                                 response))
         {
-            return 1U;
+            usart_tx_str(&USART2, "CEREG RESPONSE:\r\n");
+            usart_tx_str(&USART2, response);
+            usart_tx_str(&USART2, "\r\n");
+
+            /* Registered on home network */
+            if (strstr(response, "+CEREG: 0,1") != NULL)
+            {
+                usart_tx_str(&USART2,
+                             "[OK] Registered on home network\r\n");
+
+                return 1U;
+            }
+
+            /* Registered while roaming */
+            if (strstr(response, "+CEREG: 0,5") != NULL)
+            {
+                usart_tx_str(&USART2,
+                             "[OK] Registered while roaming\r\n");
+
+                return 1U;
+            }
+
+            /* Searching */
+            if (strstr(response, "+CEREG: 0,2") != NULL)
+            {
+                usart_tx_str(&USART2,
+                             "[WAIT] Network searching...\r\n");
+            }
+
+            /* Not registered */
+            else if (strstr(response, "+CEREG: 0,0") != NULL)
+            {
+                usart_tx_str(&USART2,
+                             "[WAIT] Not registered yet...\r\n");
+            }
+
+            /* Registration denied */
+            else if (strstr(response, "+CEREG: 0,3") != NULL)
+            {
+                usart_tx_str(&USART2,
+                             "[FAIL] Network registration denied\r\n");
+
+                return 0U;
+            }
         }
+
+        /* Wait 2 seconds before checking again */
+        tim2_delay(2000);
     }
+
+    usart_tx_str(&USART2,
+                 "\r\n[FAIL] Network registration timeout\r\n");
 
     return 0U;
 }
@@ -62,7 +126,7 @@ uint8_t ec200u_get_imei(USART_Handle_t *husart, char *imei)
     char *start;
     char *end;
 
-    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+CGSN", response))
+    if(!ec200u_send_and_wait(husart, "AT+CGSN", response))
     {
         return 0U;
     }
@@ -107,7 +171,7 @@ uint8_t ec200u_get_operator(USART_Handle_t *husart, char *operator_name)
     char *start;
     char *end;
 
-    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+COPS?", response))
+    if(!ec200u_send_and_wait(husart, "AT+COPS?", response))
     {
         return 0U;
     }
@@ -139,7 +203,7 @@ uint8_t ec200u_get_signal(USART_Handle_t *husart, uint8_t *rssi)
     char response[128];
     char *start;
 
-    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+CSQ", response))
+    if(!ec200u_send_and_wait(husart, "AT+CSQ", response))
     {
         return 0U;
     }
@@ -169,7 +233,7 @@ uint8_t ec200u_get_iccid(USART_Handle_t *husart, char *iccid)
     char *start;
     char *end;
 
-    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+QCCID", response))
+    if(!ec200u_send_and_wait(husart, "AT+QCCID", response))
     {
         return 0U;
     }
@@ -213,21 +277,14 @@ uint8_t ec200u_get_network_info(USART_Handle_t *husart, char *network)
 
     memset(response, 0, sizeof(response));
 
-    /*
-     * Send AT+QNWINFO
-     */
-    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSENDING QNWINFO...\r\n");
-
-    ec200u_send_cmd(husart->SR, husart->DR, "AT+QNWINFO");
-
-    usart_tx_str(&USART2_SR, &USART2_DR, "QNWINFO COMMAND SENT\r\n");
+    ec200u_send_cmd(husart, "AT+QNWINFO");
 
     /*
      * Receive response
      */
     while (index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(husart->SR, husart->DR);
+        ch = usart_rx_ch(husart);
 
         response[index++] = ch;
         response[index] = '\0';
@@ -270,15 +327,6 @@ uint8_t ec200u_get_network_info(USART_Handle_t *husart, char *network)
 
                         network[end - start] = '\0';
 
-                        /*
-                         * Print received network
-                         */
-                        usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQNWINFO Response:\r\n");
-
-                        usart_tx_str(&USART2_SR, &USART2_DR, response);
-
-                        usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
-
                         return 1U;
                     }
                 }
@@ -290,13 +338,13 @@ uint8_t ec200u_get_network_info(USART_Handle_t *husart, char *network)
          */
         if (strstr(response, "ERROR") != NULL)
         {
-            usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQNWINFO ERROR\r\n");
+            usart_tx_str(&USART2, "\r\nQNWINFO ERROR\r\n");
 
             return 0U;
         }
     }
 
-    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQNWINFO RESPONSE TIMEOUT\r\n");
+    usart_tx_str(&USART2, "\r\nQNWINFO RESPONSE TIMEOUT\r\n");
 
     return 0U;
 }
@@ -306,7 +354,7 @@ uint8_t ec200u_get_firmware(USART_Handle_t *husart, char *version)
     char response[256];
     char *start;
 
-    if(!ec200u_send_and_wait(husart->SR, husart->DR, "ATI", response))
+    if(!ec200u_send_and_wait(husart, "ATI", response))
     {
         return 0U;
     }
@@ -346,14 +394,14 @@ uint8_t ec200u_set_apn(USART_Handle_t *husart, const char *apn)
     strcat(cmd, apn);
     strcat(cmd, "\",\"\",\"\",1");
 
-    return ec200u_send_and_wait(husart->SR, husart->DR, cmd, response);
+    return ec200u_send_and_wait(husart, cmd, response);
 }
 
 uint8_t ec200u_activate_pdp(USART_Handle_t *husart)
 {
     char response[128];
 
-    return ec200u_send_and_wait(husart->SR, husart->DR, "AT+QIACT=1", response);
+    return ec200u_send_and_wait(husart, "AT+QIACT=1", response);
 }
 
 uint8_t ec200u_get_ip(USART_Handle_t *husart, char *ip)
@@ -362,7 +410,7 @@ uint8_t ec200u_get_ip(USART_Handle_t *husart, char *ip)
     char *start;
     char *end;
 
-    if(!ec200u_send_and_wait(husart->SR, husart->DR, "AT+QIACT?", response))
+    if(!ec200u_send_and_wait(husart, "AT+QIACT?", response))
     {
         return 0;
     }
@@ -394,7 +442,7 @@ uint8_t ec200u_set_mqtt_version(USART_Handle_t *husart)
 {
     char response[128];
 
-    return ec200u_send_and_wait(husart->SR, husart->DR,  "AT+QMTCFG=\"version\",0,3", response);
+    return ec200u_send_and_wait(husart,  "AT+QMTCFG=\"version\",0,3", response);
 }
 
 uint8_t ec200u_mqtt_open(USART_Handle_t *husart, const char *broker, uint16_t port)
@@ -408,14 +456,14 @@ uint8_t ec200u_mqtt_open(USART_Handle_t *husart, const char *broker, uint16_t po
     sprintf(cmd, "AT+QMTOPEN=0,\"%s\",%u", broker, port);
 
     /* Send AT command */
-    ec200u_send_cmd(husart->SR, husart->DR, cmd);
+    ec200u_send_cmd(husart, cmd);
 
     memset(response, 0, sizeof(response));
 
     /* Receive response */
     while (index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(husart->SR, husart->DR);
+        ch = usart_rx_ch(husart);
 
         /* Store everything except CR/LF */
         if (ch != '\r' && ch != '\n')
@@ -447,16 +495,9 @@ uint8_t ec200u_mqtt_open(USART_Handle_t *husart, const char *broker, uint16_t po
     /* Find QMTOPEN response */
     char *qmtopen = strstr(response, "+QMTOPEN:");
 
-    if (qmtopen != NULL)
+    if (qmtopen == NULL)
     {
-        /* Print only QMTOPEN response */
-        usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
-        usart_tx_str(&USART2_SR, &USART2_DR, qmtopen);
-        usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
-    }
-    else
-    {
-        usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQMTOPEN response not found\r\n");
+        usart_tx_str(&USART2, "\r\nQMTOPEN response not found\r\n");
     }
 
     /* Success */
@@ -483,12 +524,8 @@ uint8_t ec200u_mqtt_connect(USART_Handle_t *husart, const char *client_id, const
     /* Create QMTCONN command */
     sprintf(cmd, "AT+QMTCONN=0,\"%s\",\"%s\",\"%s\"", client_id, username, password);
 
-    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSENDING QMTCONN...\r\n");
-
     /* Send command */
-    ec200u_send_cmd(husart->SR, husart->DR, cmd);
-
-    usart_tx_str(&USART2_SR, &USART2_DR, "QMTCONN COMMAND SENT\r\n");
+    ec200u_send_cmd(husart, cmd);
 
     memset(response, 0, sizeof(response));
 
@@ -497,7 +534,7 @@ uint8_t ec200u_mqtt_connect(USART_Handle_t *husart, const char *client_id, const
      */
     while (index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(husart->SR, husart->DR);
+        ch = usart_rx_ch(husart);
 
         /*
          * ------------------------------------------------
@@ -517,8 +554,6 @@ uint8_t ec200u_mqtt_connect(USART_Handle_t *husart, const char *client_id, const
             {
                 ok_received = 1U;
                 ok_index = 0U;
-
-                usart_tx_str(&USART2_SR, &USART2_DR, "OK RECEIVED\r\n");
             }
             else
             {
@@ -627,25 +662,12 @@ uint8_t ec200u_mqtt_connect(USART_Handle_t *husart, const char *client_id, const
 
     /*
      * ------------------------------------------------
-     * Print received response
-     * ------------------------------------------------
-     */
-
-    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nQMTCONN Response:\r\n");
-
-    usart_tx_str(&USART2_SR, &USART2_DR, response);
-
-    usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
-
-    /*
-     * ------------------------------------------------
      * Check successful MQTT connection
      * ------------------------------------------------
      */
 
     if (strstr(response, "+QMTCONN:0,0,0") != NULL ||  strstr(response, "+QMTCONN: 0,0,0") != NULL)
     {
-        usart_tx_str(&USART2_SR, &USART2_DR, "MQTT CONNECTION SUCCESS\r\n");
 
         return 1U;
     }
@@ -656,7 +678,7 @@ uint8_t ec200u_mqtt_connect(USART_Handle_t *husart, const char *client_id, const
      * ------------------------------------------------
      */
 
-    usart_tx_str(&USART2_SR,  &USART2_DR, "MQTT CONNECTION FAILED\r\n");
+    usart_tx_str(&USART2, "MQTT CONNECTION FAILED\r\n");
 
     return 0U;
 }
@@ -678,12 +700,8 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
      */
     sprintf(cmd, "AT+QMTPUB=0,0,0,0,\"%s\"", topic);
 
-    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nSENDING MQTT PUBLISH...\r\n");
-
     /* Send command */
-    ec200u_send_cmd(husart->SR, husart->DR, cmd);
-
-    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT PUBLISH COMMAND SENT\r\n");
+    ec200u_send_cmd(husart, cmd);
 
     /*
      * --------------------------------------------------
@@ -698,12 +716,12 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
 
     while(index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(husart->SR, husart->DR);
+        ch = usart_rx_ch(husart);
 
         /*
          * Debug: print received character
          */
-        usart_tx_ch(&USART2_SR, &USART2_DR, ch);
+        //usart_tx_ch(&USART2, ch);
 
         /*
          * Store character
@@ -716,8 +734,6 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
          */
         if(ch == '>')
         {
-            usart_tx_str(&USART2_SR, &USART2_DR, "\r\nPUBLISH PROMPT RECEIVED\r\n");
-
             break;
         }
 
@@ -726,7 +742,7 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
          */
         if(strstr(response, "ERROR") != NULL)
         {
-            usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT PUBLISH COMMAND ERROR\r\n");
+            usart_tx_str(&USART2, "\r\nMQTT PUBLISH COMMAND ERROR\r\n");
 
             return 0U;
         }
@@ -737,7 +753,7 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
      */
     if(strchr(response, '>') == NULL)
     {
-        usart_tx_str(&USART2_SR, &USART2_DR, "\r\nPUBLISH PROMPT NOT RECEIVED\r\n");
+        usart_tx_str(&USART2, "\r\nPUBLISH PROMPT NOT RECEIVED\r\n");
 
         return 0U;
     }
@@ -749,16 +765,14 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
      * --------------------------------------------------
      */
 
-    usart_tx_str(husart->SR, husart->DR, message);
+    usart_tx_str(husart, message);
 
     /*
      * CTRL+Z
      *
      * Indicates end of MQTT payload.
      */
-    usart_tx_ch(husart->SR, husart->DR, 0x1A);
-
-    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT MESSAGE SENT\r\n");
+    usart_tx_ch(husart, 0x1A);
 
     /*
      * --------------------------------------------------
@@ -773,7 +787,7 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
 
     while(index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(husart->SR, husart->DR);
+        ch = usart_rx_ch(husart);
 
         response[index++] = ch;
         response[index] = '\0';
@@ -789,8 +803,6 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
          */
         if(strstr(response, "+QMTPUB: 0,0,0") != NULL || strstr(response, "+QMTPUB:0,0,0") != NULL)
         {
-            usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT PUBLISH SUCCESS\r\n");
-
             return 1U;
         }
 
@@ -820,19 +832,18 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
      * --------------------------------------------------
      */
 
-    usart_tx_str(&USART2_SR, &USART2_DR, "\r\nMQTT PUBLISH Response:\r\n");
+    usart_tx_str(&USART2, "\r\nMQTT PUBLISH Response:\r\n");
 
-    usart_tx_str(&USART2_SR, &USART2_DR, response);
+    usart_tx_str(&USART2, response);
 
-    usart_tx_str(&USART2_SR, &USART2_DR, "\r\n");
+    usart_tx_str(&USART2, "\r\n");
 
     /*
      * Check success one more time.
      */
     if(strstr(response, "+QMTPUB: 0,0,0") != NULL ||  strstr(response, "+QMTPUB:0,0,0") != NULL)
     {
-        usart_tx_str(&USART2_SR, &USART2_DR, "MQTT PUBLISH SUCCESS\r\n");
-
+        usart_tx_str(&USART2, "\r\n");
         return 1U;
     }
 
@@ -856,12 +867,11 @@ uint8_t ec200u_mqtt_subscribe(USART_Handle_t *husart, const char *topic, uint8_t
 
     snprintf(cmd, sizeof(cmd), "AT+QMTSUB=0,1,\"%s\",%u\r\n", topic, qos);
 
-    usart_tx_str(husart->SR, husart->DR, cmd);
+    usart_tx_str(husart, cmd);
 
     /*
      * Debug message
      */
-    usart_tx_str(&USART2_SR,&USART2_DR, "MQTT SUBSCRIBE COMMAND SENT\r\n");
 
     /*
      * ---------------------------------------------------------
@@ -915,8 +925,8 @@ uint8_t ec200u_mqtt_subscribe(USART_Handle_t *husart, const char *topic, uint8_t
 
     response[index] = '\0';
 
-    usart_tx_str(&USART2_SR,&USART2_DR,"MQTT SUBSCRIBE Response:\r\n");
-    usart_tx_str(&USART2_SR,&USART2_DR, response);
+//    usart_tx_str(&USART2,"MQTT SUBSCRIBE Response:\r\n");
+//    usart_tx_str(&USART2, response);
 
     /*
      * ---------------------------------------------------------
@@ -931,15 +941,13 @@ uint8_t ec200u_mqtt_subscribe(USART_Handle_t *husart, const char *topic, uint8_t
 
     if (strstr(response, "+QMTSUB: 0,1,0") != NULL)
     {
-    	usart_tx_str(&USART2_SR,&USART2_DR,"MQTT SUBSCRIBE SUCCESS\r\n");
-    	usart_tx_str(&USART2_SR,&USART2_DR,topic);
         return 1U;
     }
 
     /*
      * Any other result is failure.
      */
-    usart_tx_str(&USART2_SR,&USART2_DR,"MQTT SUBSCRIBE FAILED\r\n");
+    usart_tx_str(&USART2,"MQTT SUBSCRIBE FAILED\r\n");
 
     return 0U;
 }
@@ -963,7 +971,7 @@ uint8_t ec200u_mqtt_receive(USART_Handle_t *husart, char *topic, char *message)
 
     while (index < sizeof(response) - 1)
     {
-        ch = usart_rx_ch(husart->SR, husart->DR);
+        ch = usart_rx_ch(husart);
 
         response[index++] = ch;
         response[index] = '\0';
@@ -1066,21 +1074,17 @@ uint8_t ec200u_mqtt_disconnect(USART_Handle_t *husart)
     uint32_t index = 0;
     char ch;
 
-    usart_tx_str(&USART2_SR, &USART2_DR, "SENDING MQTT DISCONNECT...\r\n");
-
-    usart_tx_str(husart->SR, husart->DR, "AT+QMTDISC=0\r");
+    usart_tx_str(husart, "AT+QMTDISC=0\r");
 
     while (index < (sizeof(response) - 1U))
     {
-        ch = usart_rx_ch(husart->SR, husart->DR);
+        ch = usart_rx_ch(husart);
 
         response[index++] = ch;
         response[index] = '\0';
 
         if (strstr(response, "+QMTDISC: 0,0") != NULL)
         {
-            usart_tx_str(&USART2_SR, &USART2_DR, "MQTT DISCONNECT SUCCESS\r\n");
-
             return 1U;
         }
 
@@ -1090,7 +1094,7 @@ uint8_t ec200u_mqtt_disconnect(USART_Handle_t *husart)
         }
     }
 
-    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT DISCONNECT FAILED\r\n");
+    usart_tx_str(&USART2, "MQTT DISCONNECT FAILED\r\n");
 
     return 0U;
 }
@@ -1101,21 +1105,17 @@ uint8_t ec200u_mqtt_close(USART_Handle_t *husart)
     uint32_t index = 0;
     char ch;
 
-    usart_tx_str(&USART2_SR, &USART2_DR, "SENDING MQTT CLOSE...\r\n");
-
-    usart_tx_str(husart->SR, husart->DR, "AT+QMTCLOSE=0\r");
+    usart_tx_str(husart, "AT+QMTCLOSE=0\r");
 
     while(index < (sizeof(response) - 1U))
     {
-        ch = usart_rx_ch(husart->SR, husart->DR);
+        ch = usart_rx_ch(husart);
 
         response[index++] = ch;
         response[index] = '\0';
 
         if(strstr(response, "+QMTCLOSE: 0,0") != NULL)
         {
-            usart_tx_str(&USART2_SR, &USART2_DR, "MQTT CLOSE SUCCESS\r\n");
-
             return 1U;
         }
 
@@ -1125,24 +1125,24 @@ uint8_t ec200u_mqtt_close(USART_Handle_t *husart)
         }
     }
 
-    usart_tx_str(&USART2_SR, &USART2_DR, "MQTT CLOSE FAILED\r\n");
+    usart_tx_str(&USART2, "MQTT CLOSE FAILED\r\n");
 
     return 0U;
 }
 
 
-uint8_t ec200u_send_and_wait(volatile uint32_t *SR, volatile uint32_t *DR, const char *cmd, char *response)
+uint8_t ec200u_send_and_wait(USART_Handle_t *husart, const char *cmd, char *response)
 {
     uint32_t index = 0;
     char ch;
 
     memset(response, 0, 128);
 
-    ec200u_send_cmd(SR, DR, cmd);
+    ec200u_send_cmd(husart, cmd);
 
     while(index < 127)
     {
-        ch = usart_rx_ch(SR, DR);
+        ch = usart_rx_ch(husart);
 
         response[index++] = ch;
         response[index] = '\0';
@@ -1163,9 +1163,490 @@ uint8_t ec200u_send_and_wait(volatile uint32_t *SR, volatile uint32_t *DR, const
     return 0U;
 }
 
-void ec200u_send_cmd(volatile uint32_t *SR, volatile uint32_t *DR,const char *cmd)
+void ec200u_send_cmd(USART_Handle_t *husart ,const char *cmd)
 {
-    usart_tx_str(SR, DR, cmd);
+    usart_tx_str(husart, cmd);
 
-    usart_tx_str(SR, DR, "\r\n");
+    usart_tx_str(husart, "\r\n");
+}
+
+void ec200u_test_with_mqtt(){
+	while(1)
+	{
+		/* Reset Module */
+		if(!ec200u_reset_module(&USART1))
+		{
+			usart_tx_str(&USART2, "\r\nMODEM NOT RESET - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2,  "\r\nMODEM RESET\r\n");
+		tim2_delay(5000);
+
+		/* Check AT */
+		if(!ec200u_check_module(&USART1))
+		{
+			usart_tx_str(&USART2, "\r\nMODEM FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nMODEM OK\r\n");
+		tim2_delay(1000);
+
+		/* Check SIM */
+		if(!ec200u_check_sim(&USART1))
+		{
+			usart_tx_str(&USART2, "\r\nSIM FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nSIM OK\r\n");
+		tim2_delay(1000);
+
+		/* Check Network */
+		if(!ec200u_check_network(&USART1))
+		{
+			usart_tx_str(&USART2, "\r\nNETWORK FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nNETWORK OK\r\n");
+		tim2_delay(1000);
+
+		/* IMEI */
+		if(!ec200u_get_imei(&USART1, imei))
+		{
+			usart_tx_str(&USART2, "\r\nIMEI READ FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nIMEI: ");
+		usart_tx_str(&USART2, imei);
+		usart_tx_str(&USART2, "\r\n");
+		tim2_delay(1000);
+
+		/* Operator */
+		if(!ec200u_get_operator(&USART1, operator_name))
+		{
+			usart_tx_str(&USART2, "\r\nOPERATOR FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nOperator: ");
+		usart_tx_str(&USART2, operator_name);
+		usart_tx_str(&USART2, "\r\n");
+		tim2_delay(1000);
+
+		/* Signal */
+		if(!ec200u_get_signal(&USART1, &Signal))
+		{
+			usart_tx_str(&USART2, "\r\nSIGNAL FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nSignal: ");
+		usart_tx_uint(&USART2, Signal);
+		tim2_delay(1000);
+
+		/* ICCID */
+		if(!ec200u_get_iccid(&USART1, iccid))
+		{
+		    usart_tx_str(&USART2, "\r\nICCID FAIL - Retrying...\r\n");
+		    continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nICCID: ");
+		usart_tx_str(&USART2, iccid);
+		usart_tx_str(&USART2, "\r\n");
+		tim2_delay(1000);
+
+		/* Network Info */
+		if(!ec200u_get_network_info(&USART1, network))
+		{
+			usart_tx_str(&USART2, "\r\nNETWORK INFO FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nNetwork Info: ");
+		usart_tx_str(&USART2, network);
+		usart_tx_str(&USART2, "\r\n");
+		tim2_delay(1000);
+
+		/* Firmware */
+		if(!ec200u_get_firmware(&USART1, version))
+		{
+			usart_tx_str(&USART2, "\r\nFIRMWARE FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nFirmware: ");
+		usart_tx_str(&USART2, version);
+		usart_tx_str(&USART2, "\r\n");
+		tim2_delay(1000);
+
+		/* APN */
+		if(!ec200u_set_apn(&USART1, "jionet"))
+		{
+			usart_tx_str(&USART2, "\r\nAPN FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nAPN OK\r\n");
+		tim2_delay(1000);
+
+		/* PDP Activate */
+		if(!ec200u_activate_pdp(&USART1))
+		{
+			usart_tx_str(&USART2, "\r\nPDP FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nPDP ACTIVATED\r\n");
+		tim2_delay(1000);
+
+		/* Get IP */
+		if(!ec200u_get_ip(&USART1, ip_addr))
+		{
+			usart_tx_str(&USART2, "\r\nIP FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nIP Address: ");
+		usart_tx_str(&USART2, ip_addr);
+		usart_tx_str(&USART2, "\r\n");
+		tim2_delay(1000);
+
+		/* MQTT Version */
+		if(!ec200u_set_mqtt_version(&USART1))
+		{
+			usart_tx_str(&USART2, "\r\nMQTT VERSION FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nMQTT VERSION SET\r\n");
+		tim2_delay(1000);
+
+		/* MQTT Open */
+		if(!ec200u_mqtt_open(&USART1, "broker.hivemq.com", 1883))
+		{
+			usart_tx_str(&USART2, "\r\nMQTT OPEN FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nMQTT CONNECTION OPENED\r\n");
+		tim2_delay(1000);
+
+		char client_id[32];
+
+		srand(12345);   // Seed once during initialization
+
+		uint32_t random_number = 10000U + (rand() % 90000U);
+
+		snprintf(client_id, sizeof(client_id),"stm32%lu", (unsigned long)random_number);
+
+		/* MQTT Connect */
+		if(!ec200u_mqtt_connect(&USART1, client_id,"",""))
+		{
+			usart_tx_str(&USART2, "\r\nMQTT CONNECT FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nMQTT CONNECTED\r\n");
+
+		tim2_delay(1000);
+
+		if(!ec200u_mqtt_subscribe(&USART1, "stm32/command", 0))
+		{
+			usart_tx_str(&USART2, "\r\nMQTT SUBSCRIBE FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nMQTT SUBSCRIBED\r\n");
+
+		if(!ec200u_mqtt_publish(&USART1, "stm32/status", "Hello from STM32"))
+		{
+			usart_tx_str(&USART2, "\r\nMQTT PUBLISH FAIL - Retrying...\r\n");
+			continue;
+		}
+
+		usart_tx_str(&USART2, "\r\nMQTT PUBLISHED\r\n");
+
+		if(ec200u_mqtt_disconnect(&USART1))
+		{
+			usart_tx_str(&USART2, "\r\nMQTT DISCONNECTED\r\n");
+			usart_tx_str(&USART2, "\r\n");
+		}
+
+		if(ec200u_mqtt_close(&USART1))
+		{
+			usart_tx_str(&USART2, "MQTT SOCKET CLOSED\r\n");
+			usart_tx_str(&USART2, "\r\n");
+			break;
+		}
+		}
+}
+
+uint8_t ec200u_init(USART_Handle_t *pUSART)
+{
+    usart_tx_str(&USART2, "\r\n[1] Reset modem...\r\n");
+
+    if (!ec200u_reset_module(pUSART))
+    {
+        usart_tx_str(&USART2, "[FAIL] Reset modem\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] Reset modem\r\n");
+
+    /* Wait for modem to boot */
+    tim2_delay(5000);
+
+
+    /******************************************************
+     * 2. CHECK AT
+     ******************************************************/
+    usart_tx_str(&USART2, "[2] Check AT...\r\n");
+
+    if (!ec200u_check_module(pUSART))
+    {
+        usart_tx_str(&USART2, "[FAIL] Check AT\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] Check AT\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 3. CHECK SIM
+     ******************************************************/
+    usart_tx_str(&USART2, "[3] Check SIM...\r\n");
+
+    if (!ec200u_check_sim(pUSART))
+    {
+        usart_tx_str(&USART2, "[FAIL] Check SIM\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] Check SIM\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 4. CHECK NETWORK
+     ******************************************************/
+    usart_tx_str(&USART2, "[4] Check Network...\r\n");
+
+    if (!ec200u_check_network(pUSART))
+    {
+        usart_tx_str(&USART2, "[FAIL] Check Network\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] Network\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 5. GET IMEI
+     ******************************************************/
+    usart_tx_str(&USART2, "[5] Get IMEI...\r\n");
+
+    if (!ec200u_get_imei(pUSART, imei))
+    {
+        usart_tx_str(&USART2, "[FAIL] IMEI\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] IMEI: ");
+    usart_tx_str(&USART2, imei);
+    usart_tx_str(&USART2, "\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 6. GET OPERATOR
+     ******************************************************/
+    usart_tx_str(&USART2, "[6] Get Operator...\r\n");
+
+    if (!ec200u_get_operator(pUSART, operator_name))
+    {
+        usart_tx_str(&USART2, "[FAIL] Operator\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] Operator: ");
+    usart_tx_str(&USART2, operator_name);
+    usart_tx_str(&USART2, "\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 7. GET SIGNAL
+     ******************************************************/
+    usart_tx_str(&USART2, "[7] Get Signal...\r\n");
+
+    if (!ec200u_get_signal(pUSART, &Signal))
+    {
+        usart_tx_str(&USART2, "[FAIL] Signal\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] Signal: ");
+    usart_tx_uint(&USART2, Signal);
+    usart_tx_str(&USART2, "\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 8. GET ICCID
+     ******************************************************/
+    usart_tx_str(&USART2, "[8] Get ICCID...\r\n");
+
+    if (!ec200u_get_iccid(pUSART, iccid))
+    {
+        usart_tx_str(&USART2, "[FAIL] ICCID\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] ICCID: ");
+    usart_tx_str(&USART2, iccid);
+    usart_tx_str(&USART2, "\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 9. GET NETWORK INFO
+     ******************************************************/
+    usart_tx_str(&USART2, "[9] Get Network Info...\r\n");
+
+    if (!ec200u_get_network_info(pUSART, network))
+    {
+        usart_tx_str(&USART2, "[FAIL] Network Info\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] Network Info: ");
+    usart_tx_str(&USART2, network);
+    usart_tx_str(&USART2, "\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 10. GET FIRMWARE
+     ******************************************************/
+    usart_tx_str(&USART2, "[10] Get Firmware...\r\n");
+
+    if (!ec200u_get_firmware(pUSART, version))
+    {
+        usart_tx_str(&USART2, "[FAIL] Firmware\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] Firmware: ");
+    usart_tx_str(&USART2, version);
+    usart_tx_str(&USART2, "\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 11. SET APN
+     ******************************************************/
+    usart_tx_str(&USART2, "[11] Set APN...\r\n");
+
+    if (!ec200u_set_apn(pUSART, "jionet"))
+    {
+        usart_tx_str(&USART2, "[FAIL] APN\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] APN\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 12. ACTIVATE PDP
+     ******************************************************/
+    usart_tx_str(&USART2, "[12] Activate PDP...\r\n");
+
+    if (!ec200u_activate_pdp(pUSART))
+    {
+        usart_tx_str(&USART2, "[FAIL] PDP\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] PDP\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * 13. GET IP
+     ******************************************************/
+    usart_tx_str(&USART2, "[13] Get IP...\r\n");
+
+    if (!ec200u_get_ip(pUSART, ip_addr))
+    {
+        usart_tx_str(&USART2, "[FAIL] IP\r\n");
+        return 0;
+    }
+
+    usart_tx_str(&USART2, "[OK] IP: ");
+    usart_tx_str(&USART2, ip_addr);
+    usart_tx_str(&USART2, "\r\n");
+
+    tim2_delay(1000);
+
+
+    /******************************************************
+     * INITIALIZATION COMPLETE
+     ******************************************************/
+    usart_tx_str(&USART2,
+                 "\r\nEC200U INITIALIZATION SUCCESS\r\n");
+
+    return 1;
+}uint8_t ec200u_mqtt_init(USART_Handle_t *pUSART)
+{
+    char client_id[256];
+
+    snprintf(client_id,
+             sizeof(client_id),
+             "stm32_%s",
+             &imei[10]);   /* Example only */
+
+    if (!ec200u_set_mqtt_version(pUSART))
+        return 0;
+
+    if (!ec200u_mqtt_open(pUSART,
+                          "broker.hivemq.com",
+                          1883))
+        return 0;
+
+    if (!ec200u_mqtt_connect(pUSART,
+                             client_id,
+                             "",
+                             ""))
+        return 0;
+
+    if (!ec200u_mqtt_subscribe(pUSART,
+                               "stm32/command",
+                               0))
+        return 0;
+
+    if (!ec200u_mqtt_publish(pUSART,
+                             "stm32/status",
+                             "STM32 Online"))
+        return 0;
+
+    return 1;
 }
