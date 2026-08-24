@@ -57,36 +57,30 @@ int main(void)
 	//uint8_t led_status = 1;
 	//ec200u_test_with_mqtt();
 
-	usart_tx_str(&USART2, "\r\nSTM32 EC200U STARTING...\r\n");
+	usart_tx_str(&USART2,"\r\nSTM32 EC200U STARTING...\r\n");
 
-	/* Initialize EC200U modem */
+
 	if (!ec200u_init(&USART1))
 	{
 		usart_tx_str(&USART2, "\r\nEC200U INIT FAILED\r\n");
-
-	        while (1)
-	        {
-	            /* Retry / error handling */
-	        }
 	}
 
 	usart_tx_str(&USART2, "\r\nEC200U INIT SUCCESS\r\n");
 
 
-	/* Initialize MQTT */
-	if (!ec200u_mqtt_init(&USART1))
+	/* * First MQTT connection */
+
+	while (!ec200u_mqtt_init(&USART1))
 	{
-	        usart_tx_str(&USART2, "\r\nMQTT INIT FAILED\r\n");
-	        while (1)
-	        {
-	            /* Retry / error handling */
-	        }
+		usart_tx_str(&USART2,	"\r\nMQTT CONNECTION FAILED\r\n");
+
+	    usart_tx_str(&USART2,	"Retrying MQTT...\r\n");
+
+	    tim2_delay(5000);
+
 	}
 
 	usart_tx_str(&USART2, "\r\nMQTT INIT SUCCESS\r\n");
-
-
-
 
 //	char topic[128];
 //	char message[256];

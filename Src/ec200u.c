@@ -1447,7 +1447,7 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
 
     usart_tx_str(&USART2, "[OK] Network\r\n");
 
-    tim2_delay(1000);
+    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1465,7 +1465,7 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, imei);
     usart_tx_str(&USART2, "\r\n");
 
-    tim2_delay(1000);
+    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1483,7 +1483,7 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, operator_name);
     usart_tx_str(&USART2, "\r\n");
 
-    tim2_delay(1000);
+    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1501,7 +1501,7 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_uint(&USART2, Signal);
     usart_tx_str(&USART2, "\r\n");
 
-    tim2_delay(1000);
+    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1519,7 +1519,7 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, iccid);
     usart_tx_str(&USART2, "\r\n");
 
-    tim2_delay(1000);
+    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1537,7 +1537,7 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, network);
     usart_tx_str(&USART2, "\r\n");
 
-    tim2_delay(1000);
+    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1555,7 +1555,7 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, version);
     usart_tx_str(&USART2, "\r\n");
 
-    tim2_delay(1000);
+    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1571,7 +1571,7 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
 
     usart_tx_str(&USART2, "[OK] APN\r\n");
 
-    tim2_delay(1000);
+    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1587,7 +1587,7 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
 
     usart_tx_str(&USART2, "[OK] PDP\r\n");
 
-    tim2_delay(1000);
+    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1605,47 +1605,30 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, ip_addr);
     usart_tx_str(&USART2, "\r\n");
 
-    tim2_delay(1000);
-
-
-    /******************************************************
-     * INITIALIZATION COMPLETE
-     ******************************************************/
-    usart_tx_str(&USART2,
-                 "\r\nEC200U INITIALIZATION SUCCESS\r\n");
+    //tim2_delay(1000);
 
     return 1;
-}uint8_t ec200u_mqtt_init(USART_Handle_t *pUSART)
+}
+
+uint8_t ec200u_mqtt_init(USART_Handle_t *pUSART)
 {
     char client_id[256];
 
-    snprintf(client_id,
-             sizeof(client_id),
-             "stm32_%s",
-             &imei[10]);   /* Example only */
+    snprintf(client_id, sizeof(client_id), "stm32_%s",&imei[10]);   /* Example only */
 
     if (!ec200u_set_mqtt_version(pUSART))
         return 0;
 
-    if (!ec200u_mqtt_open(pUSART,
-                          "broker.hivemq.com",
-                          1883))
+    if (!ec200u_mqtt_open(pUSART,	"broker.hivemq.com",	1883))
         return 0;
 
-    if (!ec200u_mqtt_connect(pUSART,
-                             client_id,
-                             "",
-                             ""))
+    if (!ec200u_mqtt_connect(pUSART, client_id, "", ""))
         return 0;
 
-    if (!ec200u_mqtt_subscribe(pUSART,
-                               "stm32/command",
-                               0))
+    if (!ec200u_mqtt_subscribe(pUSART,	"stm32/command", 0))
         return 0;
 
-    if (!ec200u_mqtt_publish(pUSART,
-                             "stm32/status",
-                             "STM32 Online"))
+    if (!ec200u_mqtt_publish(pUSART, "stm32/status", "STM32 Online"))
         return 0;
 
     return 1;
