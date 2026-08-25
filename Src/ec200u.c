@@ -702,110 +702,86 @@ uint8_t ec200u_mqtt_connect(USART_Handle_t *husart, const char *client_id, const
     return 0U;
 }
 
-uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const char *message, uint8_t Qos, bool retain)
+uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const char *message, uint8_t qos, bool retain)
 {
     char cmd[256];
     char response[256];
+
     uint32_t index = 0;
     char ch;
 
-    /*
+    /* --------------------------------------------------
      * Create QMTPUB command
-     *
-     * client index = 0
-     * msg ID       = 0
-     * QoS          = 0
-     * retain       = 0
-     */
-    snprintf(cmd, sizeof(cmd), "AT+QMTPUB=0,0,%u,%u,\"%s\"",Qos, retain, topic);
+     * -------------------------------------------------- */
 
+    snprintf(cmd, sizeof(cmd), "AT+QMTPUB=0,0,%u,%u,\"%s\"", qos, retain ? 1U : 0U, topic);
+    /* --------------------------------------------------
+     * Send QMTPUB command
+     * -------------------------------------------------- */
 
-    /* Send command */
     ec200u_send_cmd(husart, cmd);
 
-    /*
-     * --------------------------------------------------
-     * STEP 1:
-     * Wait for '>' prompt
-     * --------------------------------------------------
-     */
+    /* --------------------------------------------------
+     * Wait for '>'
+     * -------------------------------------------------- */
 
     memset(response, 0, sizeof(response));
 
     index = 0;
 
-    while(index < sizeof(response) - 1)
+    while (index < sizeof(response) - 1U)
     {
         ch = usart_rx_ch(husart);
 
-        /*
-         * Debug: print received character
-         */
+        /* Debug */
         //usart_tx_ch(&USART2, ch);
 
-        /*
-         * Store character
-         */
         response[index++] = ch;
         response[index] = '\0';
 
-        /*
-         * Payload prompt received
-         */
-        if(ch == '>')
+        if (ch == '>')
         {
             break;
         }
 
-        /*
-         * Command error
-         */
-        if(strstr(response, "ERROR") != NULL)
+        if (strstr(response, "ERROR") != NULL)
         {
-            usart_tx_str(&USART2, "\r\nMQTT PUBLISH COMMAND ERROR\r\n");
+            usart_tx_str(&USART2, "\r\nQMTPUB COMMAND ERROR\r\n");
 
             return 0U;
         }
     }
 
-    /*
-     * Make sure '>' was received.
-     */
-    if(strchr(response, '>') == NULL)
+    if (strchr(response, '>') == NULL)
     {
         usart_tx_str(&USART2, "\r\nPUBLISH PROMPT NOT RECEIVED\r\n");
 
         return 0U;
     }
 
-    /*
-     * --------------------------------------------------
-     * STEP 2:
-     * Send MQTT payload
-     * --------------------------------------------------
-     */
+    /* --------------------------------------------------
+     * Send payload
+     * -------------------------------------------------- */
 
     usart_tx_str(husart, message);
 
-    /*
-     * CTRL+Z
-     *
-     * Indicates end of MQTT payload.
-     */
+    /* --------------------------------------------------
+     * Send CTRL+Z
+     * -------------------------------------------------- */
+
     usart_tx_ch(husart, 0x1A);
 
-    /*
-     * --------------------------------------------------
-     * STEP 3:
-     * Receive publish result
-     * --------------------------------------------------
-     */
+    /* --------------------------------------------------
+     * Wait for publish response
+     * -------------------------------------------------- */
 
     memset(response, 0, sizeof(response));
 
     index = 0;
 
-    while(index < sizeof(response) - 1)
+    tim2_delay(100);
+
+    while (index < sizeof(response) - 1U)
     {
         ch = usart_rx_ch(husart);
 
@@ -813,59 +789,32 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
         response[index] = '\0';
 
         /*
-         * SUCCESS
-         *
-         * +QMTPUB: 0,0,0
-         *
-         * or
-         *
-         * +QMTPUB:0,0,0
+         * Debug received characters
          */
-        if(strstr(response, "+QMTPUB: 0,0,0") != NULL || strstr(response, "+QMTPUB:0,0,0") != NULL)
+        //usart_tx_ch(&USART2, ch);
+
+        /*
+         * Successful publish
+         */
+        if (strstr(response, "+QMTPUB: 0,0,0") != NULL || strstr(response, "+QMTPUB:0,0,0") != NULL)
         {
+            usart_tx_str(&USART2, "\r\nMQTT PUBLISH SUCCESS\r\n");
+
             return 1U;
         }
 
         /*
-         * ERROR
+         * Error
          */
-        if(strstr(response, "ERROR") != NULL)
+        if (strstr(response, "ERROR") != NULL)
         {
-            break;
+            usart_tx_str(&USART2, "\r\nMQTT PUBLISH ERROR\r\n");
+
+            return 0U;
         }
-
-        /*
-         * IMPORTANT:
-         *
-         * Do NOT break just because
-         * "+QMTPUB:" was received.
-         *
-         * The remaining characters may
-         * arrive later.
-         */
     }
 
-    /*
-     * --------------------------------------------------
-     * STEP 4:
-     * Print complete response
-     * --------------------------------------------------
-     */
-
-    usart_tx_str(&USART2, "\r\nMQTT PUBLISH Response:\r\n");
-
-    usart_tx_str(&USART2, response);
-
-    usart_tx_str(&USART2, "\r\n");
-
-    /*
-     * Check success one more time.
-     */
-    if(strstr(response, "+QMTPUB: 0,0,0") != NULL ||  strstr(response, "+QMTPUB:0,0,0") != NULL)
-    {
-        usart_tx_str(&USART2, "\r\n");
-        return 1U;
-    }
+    usart_tx_str(&USART2, "\r\nMQTT PUBLISH RESPONSE TIMEOUT/INVALID\r\n");
 
     return 0U;
 }
@@ -1626,9 +1575,10 @@ uint8_t ec200u_mqtt_init(USART_Handle_t *pUSART)
     if (!ec200u_mqtt_connect(pUSART, client_id, "", ""))
         return 0;
 
-//    if (!ec200u_mqtt_publish(pUSART, mqtt_device_topic, "{\"Device status\":\"Online\"}", 0, true))
     if (!ec200u_mqtt_publish(pUSART, mqtt_device_topic, "Online", 0U, true))
+    {
         return 0;
+    }
 
     if (!ec200u_mqtt_subscribe(pUSART,	mqtt_sub_topic, 0))
         return 0;

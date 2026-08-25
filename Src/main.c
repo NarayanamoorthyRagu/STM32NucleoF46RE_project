@@ -173,9 +173,8 @@ int main(void)
 	        	usart_tx_uint(&USART2, current_status);
 	        	gpioa_digitalWrite(5, led_status);
 	        	char output[32];
-	        	snprintf(output,sizeof(output),"%u", (bool)led_status);
-	        	//snprintf(output,sizeof(output),"{\"Button status\":\"%lu\"}", (unsigned long)led_status);
-	        	ec200u_mqtt_publish(&USART1, mqtt_pub_topic, output, 0, false);
+	        	snprintf(output,sizeof(output),"{\"Button status\":\"%u\"}", (bool)led_status);
+	        	ec200u_mqtt_publish(&USART1, mqtt_pub_topic, output, 0U, false);
 	            (led_status) ? usart_tx_str(&USART2, "LED IS ON"):usart_tx_str(&USART2, "LED IS OFF");
 	            led_status = !led_status;
 	            tim2_delay(100);
