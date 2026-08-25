@@ -205,4 +205,11 @@ typedef struct {
 extern USART_Handle_t USART1;
 extern USART_Handle_t USART2;
 
+#define mqtt_broker 	  "broker.hivemq.com"
+#define mqtt_port 		   1883
+#define mqtt_device_topic "stm32/narayana/device"
+#define mqtt_sub_topic 	  "stm32/narayana/subscribe"
+#define mqtt_pub_topic    "stm32/narayana/publish"
+
+
 #endif /* PLATFORM_H_ */

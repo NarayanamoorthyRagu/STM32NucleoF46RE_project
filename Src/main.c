@@ -87,7 +87,6 @@ int main(void)
 	while (1)
 	{
 //****************Toggle led*******************//
-
 //		gpioa_toggle(5);
 //		gpioa_toggle(6);
 //		tim2_delay(1000);
@@ -166,19 +165,23 @@ int main(void)
 
 //**********Read input pin*********************//
 
-//	    uint8_t current_status = gpioc_digitalRead(13);
-//		usart_tx_uint(&USART2, current_status);
-//	    if (current_status != prev_status)
-//	    {
-//	        if (!current_status)
-//	        {
-//	        	gpioa_digitalWrite(5, led_status);
-//	            (led_status) ? usart_tx_str(&USART2, "LED IS ON"):usart_tx_str(&USART2, "LED IS OFF");
-//	            led_status = !led_status;
-//	            tim2_delay(1000);
-//	        }
-//	        prev_status = current_status;
-//	    }
+	    uint8_t current_status = gpioc_digitalRead(13);
+	    if (current_status != prev_status)
+	    {
+	        if (!current_status)
+	        {
+	        	usart_tx_uint(&USART2, current_status);
+	        	gpioa_digitalWrite(5, led_status);
+	        	char output[32];
+	        	snprintf(output,sizeof(output),"%u", (bool)led_status);
+	        	//snprintf(output,sizeof(output),"{\"Button status\":\"%lu\"}", (unsigned long)led_status);
+	        	ec200u_mqtt_publish(&USART1, mqtt_pub_topic, output, 0, false);
+	            (led_status) ? usart_tx_str(&USART2, "LED IS ON"):usart_tx_str(&USART2, "LED IS OFF");
+	            led_status = !led_status;
+	            tim2_delay(100);
+	        }
+	        prev_status = current_status;
+	    }
 
 //*********Read analog pin using ADC1**********//
 

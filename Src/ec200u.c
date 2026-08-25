@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 char imei[128];
 char operator_name[128];
@@ -58,15 +59,15 @@ uint8_t ec200u_check_network(USART_Handle_t *husart)
     {
         memset(response, 0, sizeof(response));
 
-        usart_tx_str(&USART2, "\r\nChecking network...\r\n");
+//        usart_tx_str(&USART2, "\r\nChecking network...\r\n");
 
         if (ec200u_send_and_wait(husart,
                                  "AT+CEREG?",
                                  response))
         {
-            usart_tx_str(&USART2, "CEREG RESPONSE:\r\n");
-            usart_tx_str(&USART2, response);
-            usart_tx_str(&USART2, "\r\n");
+//            usart_tx_str(&USART2, "CEREG RESPONSE:\r\n");
+//            usart_tx_str(&USART2, response);
+//            usart_tx_str(&USART2, "\r\n");
 
             /* Registered on home network */
             if (strstr(response, "+CEREG: 0,1") != NULL)
@@ -445,6 +446,24 @@ uint8_t ec200u_set_mqtt_version(USART_Handle_t *husart)
     return ec200u_send_and_wait(husart,  "AT+QMTCFG=\"version\",0,3", response);
 }
 
+uint8_t ec200u_mqtt_set_will(USART_Handle_t *husart, const char *topic, const char *message, uint8_t Qos, bool retain)
+{
+    char cmd[256];
+    char response[256];
+
+    snprintf(cmd, sizeof(cmd), "AT+QMTCFG=\"will\",0,1,%u,%u,\"%s\",\"%s\"",Qos, retain, topic, message);
+
+    if (!ec200u_send_and_wait(husart, cmd, response))
+    {
+        usart_tx_str(&USART2, "\r\n[FAIL] MQTT LWT configuration\r\n");
+        return 0U;
+    }
+
+    usart_tx_str(&USART2, "\r\n[OK] MQTT LWT configured\r\n");
+
+    return 1U;
+}
+
 uint8_t ec200u_mqtt_open(USART_Handle_t *husart, const char *broker, uint16_t port)
 {
     char cmd[128];
@@ -683,7 +702,7 @@ uint8_t ec200u_mqtt_connect(USART_Handle_t *husart, const char *client_id, const
     return 0U;
 }
 
-uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const char *message)
+uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const char *message, uint8_t Qos, bool retain)
 {
     char cmd[256];
     char response[256];
@@ -698,7 +717,8 @@ uint8_t ec200u_mqtt_publish(USART_Handle_t *husart, const char *topic, const cha
      * QoS          = 0
      * retain       = 0
      */
-    sprintf(cmd, "AT+QMTPUB=0,0,0,0,\"%s\"", topic);
+    snprintf(cmd, sizeof(cmd), "AT+QMTPUB=0,0,%u,%u,\"%s\"",Qos, retain, topic);
+
 
     /* Send command */
     ec200u_send_cmd(husart, cmd);
@@ -1363,7 +1383,7 @@ void ec200u_test_with_mqtt(){
 
 		usart_tx_str(&USART2, "\r\nMQTT SUBSCRIBED\r\n");
 
-		if(!ec200u_mqtt_publish(&USART1, "stm32/status", "Hello from STM32"))
+		if(!ec200u_mqtt_publish(&USART1, "stm32/status", "Hello from STM32",1,0))
 		{
 			usart_tx_str(&USART2, "\r\nMQTT PUBLISH FAIL - Retrying...\r\n");
 			continue;
@@ -1447,8 +1467,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
 
     usart_tx_str(&USART2, "[OK] Network\r\n");
 
-    //tim2_delay(1000);
-
 
     /******************************************************
      * 5. GET IMEI
@@ -1464,8 +1482,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, "[OK] IMEI: ");
     usart_tx_str(&USART2, imei);
     usart_tx_str(&USART2, "\r\n");
-
-    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1483,8 +1499,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, operator_name);
     usart_tx_str(&USART2, "\r\n");
 
-    //tim2_delay(1000);
-
 
     /******************************************************
      * 7. GET SIGNAL
@@ -1499,10 +1513,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
 
     usart_tx_str(&USART2, "[OK] Signal: ");
     usart_tx_uint(&USART2, Signal);
-    usart_tx_str(&USART2, "\r\n");
-
-    //tim2_delay(1000);
-
 
     /******************************************************
      * 8. GET ICCID
@@ -1519,9 +1529,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, iccid);
     usart_tx_str(&USART2, "\r\n");
 
-    //tim2_delay(1000);
-
-
     /******************************************************
      * 9. GET NETWORK INFO
      ******************************************************/
@@ -1536,8 +1543,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, "[OK] Network Info: ");
     usart_tx_str(&USART2, network);
     usart_tx_str(&USART2, "\r\n");
-
-    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1555,8 +1560,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, version);
     usart_tx_str(&USART2, "\r\n");
 
-    //tim2_delay(1000);
-
 
     /******************************************************
      * 11. SET APN
@@ -1571,8 +1574,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
 
     usart_tx_str(&USART2, "[OK] APN\r\n");
 
-    //tim2_delay(1000);
-
 
     /******************************************************
      * 12. ACTIVATE PDP
@@ -1586,8 +1587,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     }
 
     usart_tx_str(&USART2, "[OK] PDP\r\n");
-
-    //tim2_delay(1000);
 
 
     /******************************************************
@@ -1605,8 +1604,6 @@ uint8_t ec200u_init(USART_Handle_t *pUSART)
     usart_tx_str(&USART2, ip_addr);
     usart_tx_str(&USART2, "\r\n");
 
-    //tim2_delay(1000);
-
     return 1;
 }
 
@@ -1619,16 +1616,21 @@ uint8_t ec200u_mqtt_init(USART_Handle_t *pUSART)
     if (!ec200u_set_mqtt_version(pUSART))
         return 0;
 
-    if (!ec200u_mqtt_open(pUSART,	"broker.hivemq.com",	1883))
+//    if (!ec200u_mqtt_set_will(pUSART, mqtt_device_topic, "{\"Device status\":\"Offline\"}",0, true))
+    if (!ec200u_mqtt_set_will(pUSART, mqtt_device_topic, "Offline", 0U, true))
+        return 0U;
+
+    if (!ec200u_mqtt_open(pUSART,	mqtt_broker,	mqtt_port))
         return 0;
 
     if (!ec200u_mqtt_connect(pUSART, client_id, "", ""))
         return 0;
 
-    if (!ec200u_mqtt_subscribe(pUSART,	"stm32/command", 0))
+//    if (!ec200u_mqtt_publish(pUSART, mqtt_device_topic, "{\"Device status\":\"Online\"}", 0, true))
+    if (!ec200u_mqtt_publish(pUSART, mqtt_device_topic, "Online", 0U, true))
         return 0;
 
-    if (!ec200u_mqtt_publish(pUSART, "stm32/status", "STM32 Online"))
+    if (!ec200u_mqtt_subscribe(pUSART,	mqtt_sub_topic, 0))
         return 0;
 
     return 1;

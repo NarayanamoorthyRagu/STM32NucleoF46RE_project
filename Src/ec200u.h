@@ -9,9 +9,8 @@
 #define EC200U_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "platform.h"
-
-//uint8_t ec200u_check_module(volatile uint32_t*, volatile uint32_t*);
 
 uint8_t ec200u_check_module(USART_Handle_t*);
 
@@ -41,11 +40,13 @@ uint8_t ec200u_get_ip(USART_Handle_t*, char*);
 
 uint8_t ec200u_set_mqtt_version(USART_Handle_t*);
 
+uint8_t ec200u_mqtt_set_will(USART_Handle_t*, const char*, const char*, uint8_t, bool);
+
 uint8_t ec200u_mqtt_open(USART_Handle_t*, const char*, uint16_t);
 
 uint8_t ec200u_mqtt_connect(USART_Handle_t*, const char*, const char*, const char*);
 
-uint8_t ec200u_mqtt_publish(USART_Handle_t*, const char*, const char*);
+uint8_t ec200u_mqtt_publish(USART_Handle_t*, const char*, const char*, uint8_t, bool);
 
 uint8_t ec200u_mqtt_subscribe(USART_Handle_t*, const char* ,uint8_t);
 
