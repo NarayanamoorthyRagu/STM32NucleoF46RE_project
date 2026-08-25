@@ -1565,7 +1565,6 @@ uint8_t ec200u_mqtt_init(USART_Handle_t *pUSART)
     if (!ec200u_set_mqtt_version(pUSART))
         return 0;
 
-//    if (!ec200u_mqtt_set_will(pUSART, mqtt_device_topic, "{\"Device status\":\"Offline\"}",0, true))
     if (!ec200u_mqtt_set_will(pUSART, mqtt_device_topic, "Offline", 0U, true))
         return 0U;
 
