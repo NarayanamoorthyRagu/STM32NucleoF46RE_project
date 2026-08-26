@@ -24,6 +24,9 @@ USART_Handle_t USART2 =
     .DR = &USART2_DR
 };
 
+USART_Handle_t *usart1 = &USART1;
+USART_Handle_t *usart2 = &USART2;
+
 //USART_Handle_t USART1 = {&USART1_SR, &USART1_DR};
 //USART_Handle_t USART2 = {&USART2_SR, &USART2_DR};
 

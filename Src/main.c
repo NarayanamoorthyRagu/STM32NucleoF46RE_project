@@ -57,30 +57,30 @@ int main(void)
 	//uint8_t led_status = 1;
 	//ec200u_test_with_mqtt();
 
-	usart_tx_str(&USART2,"\r\nSTM32 EC200U STARTING...\r\n");
+	usart_tx_str(usart2,"\r\nSTM32 EC200U STARTING...\r\n");
 
 
-	if (!ec200u_init(&USART1))
+	if (!ec200u_init(usart1))
 	{
-		usart_tx_str(&USART2, "\r\nEC200U INIT FAILED\r\n");
+		usart_tx_str(usart2, "\r\nEC200U INIT FAILED\r\n");
 	}
 
-	usart_tx_str(&USART2, "\r\nEC200U INIT SUCCESS\r\n");
+	usart_tx_str(usart2, "\r\nEC200U INIT SUCCESS\r\n");
 
 
 	/* * First MQTT connection */
 
-	while (!ec200u_mqtt_init(&USART1))
+	while (!ec200u_mqtt_init(usart1))
 	{
-		usart_tx_str(&USART2,	"\r\nMQTT CONNECTION FAILED\r\n");
+		usart_tx_str(usart2,	"\r\nMQTT CONNECTION FAILED\r\n");
 
-	    usart_tx_str(&USART2,	"Retrying MQTT...\r\n");
+	    usart_tx_str(usart2,	"Retrying MQTT...\r\n");
 
 	    tim2_delay(5000);
 
 	}
 
-	usart_tx_str(&USART2, "\r\nMQTT INIT SUCCESS\r\n");
+	usart_tx_str(usart2, "\r\nMQTT INIT SUCCESS\r\n");
 
 //	char topic[128];
 //	char message[256];
@@ -95,72 +95,72 @@ int main(void)
 
 //		gpioa_digitalWrite(5, HIGH);
 //		gpioa_digitalWrite(6, HIGH);
-//		usart_tx_uint(&USART2, 1);
-//		usart_tx_ch(&USART2, '\n');
-//		usart_tx_str(&USART2, "LEDON");
-//		usart_tx_ch(&USART2, '\n');
+//		usart_tx_uint(usart2, 1);
+//		usart_tx_ch(usart2, '\n');
+//		usart_tx_str(usart2, "LEDON");
+//		usart_tx_ch(usart2, '\n');
 //		tim2_delay(1000);
 //		gpioa_digitalWrite(5, LOW);
 //		gpioa_digitalWrite(6, LOW);
-//		usart_tx_uint(&USART2, 0);
-//		usart_tx_ch(&USART2, '\n');
-//		usart_tx_str(&USART2, "LEDOFF");
-//		usart_tx_ch(&USART2, '\n');
+//		usart_tx_uint(usart2, 0);
+//		usart_tx_ch(usart2, '\n');
+//		usart_tx_str(usart2, "LEDOFF");
+//		usart_tx_ch(usart2, '\n');
 //		tim2_delay(1000);
 
 //******Receive char data from serial usart2************//
-//		if(usart_available(&USART2)){
-//		char rev_ch = usart_rx_ch(&USART2);
-//		usart_tx_ch(&USART2, rev_ch);
-//		usart_tx_ch(&USART2, '\n');
+//		if(usart_available(usart2)){
+//		char rev_ch = usart_rx_ch(usart2);
+//		usart_tx_ch(usart2, rev_ch);
+//		usart_tx_ch(usart2, '\n');
 //		if(rev_ch=='A')
 //		{
 //			gpioa_digitalWrite(5, HIGH);
 //			gpioa_digitalWrite(6, HIGH);
-//			usart_tx_uint(&USART2, 1);
-//			usart_tx_ch(&USART2, '\n');
-//			usart_tx_str(&USART2, "LEDON");
-//			usart_tx_ch(&USART2, '\n');
+//			usart_tx_uint(usart2, 1);
+//			usart_tx_ch(usart2, '\n');
+//			usart_tx_str(usart2, "LEDON");
+//			usart_tx_ch(usart2, '\n');
 //			tim2_delay(1000);
 //		}
 //		else if(rev_ch=='B')
 //		{
 //			gpioa_digitalWrite(5, LOW);
 //			gpioa_digitalWrite(6, LOW);
-//			usart_tx_uint(&USART2, 0);
-//			usart_tx_ch(&USART2, '\n');
-//			usart_tx_str(&USART2, "LEDOFF");
-//			usart_tx_ch(&USART2, '\n');
+//			usart_tx_uint(usart2, 0);
+//			usart_tx_ch(usart2, '\n');
+//			usart_tx_str(usart2, "LEDOFF");
+//			usart_tx_ch(usart2, '\n');
 //			tim2_delay(1000);
 //		}
 //		else
 //		{
-//			usart_tx_str(&USART2, "Unknown Command");
+//			usart_tx_str(usart2, "Unknown Command");
 //		}
 //		}
 
 //******Receive string data from serial usart2**********//
 
-//		usart_rx_str(&USART2, buffer);
-//		usart_tx_str(&USART2, "Received:");
-//		usart_tx_str(&USART2, buffer);
-//		usart_tx_ch(&USART2, '\n');
+//		usart_rx_str(usart2, buffer);
+//		usart_tx_str(usart2, "Received:");
+//		usart_tx_str(usart2, buffer);
+//		usart_tx_ch(usart2, '\n');
 //
 //		if (strcmp(buffer, "LEDON") == 0)
 //		{
 //			gpioa_digitalWrite(5, HIGH);
 //		    gpioa_digitalWrite(6, HIGH);
-//		    usart_tx_str(&USART2, "LED IS ON\n");
+//		    usart_tx_str(usart2, "LED IS ON\n");
 //		}
 //		else if (strcmp(buffer, "LEDOFF") == 0)
 //		{
 //		    gpioa_digitalWrite(5, LOW);
 //		    gpioa_digitalWrite(6, LOW);
-//		    usart_tx_str(&USART2, "LED IS OFF\n");
+//		    usart_tx_str(usart2, "LED IS OFF\n");
 //		}
 //		else
 //		{
-//			usart_tx_str(&USART2, "Unknown Command");
+//			usart_tx_str(usart2, "Unknown Command");
 //		}
 
 //**********Read input pin*********************//
@@ -170,12 +170,12 @@ int main(void)
 	    {
 	        if (!current_status)
 	        {
-	        	usart_tx_uint(&USART2, current_status);
+	        	usart_tx_uint(usart2, current_status);
 	        	gpioa_digitalWrite(5, led_status);
 	        	char output[32];
 	        	snprintf(output,sizeof(output),"{\"Button status\":\"%u\"}", (bool)led_status);
-	        	ec200u_mqtt_publish(&USART1, mqtt_pub_topic, output, 0U, false);
-	            (led_status) ? usart_tx_str(&USART2, "LED IS ON"):usart_tx_str(&USART2, "LED IS OFF");
+	        	ec200u_mqtt_publish(usart1, mqtt_pub_topic, output, 0U, false);
+	            (led_status) ? usart_tx_str(usart2, "LED IS ON"):usart_tx_str(usart2, "LED IS OFF");
 	            led_status = !led_status;
 	            tim2_delay(100);
 	        }
@@ -185,7 +185,7 @@ int main(void)
 //*********Read analog pin using ADC1**********//
 
 //		uint16_t sensor_data = adc_read();
-//		usart_tx_uint(&USART2, sensor_data);
+//		usart_tx_uint(usart2, sensor_data);
 //		if(sensor_data > 3000){
 //			gpioa_digitalWrite(5, HIGH);
 //		}
@@ -200,23 +200,23 @@ int main(void)
 
 //******Write pwm value***********************//
 
-//		PWM_val = usart_rx_uint(&USART2);
-//		usart_tx_str(&USART2, "Received:");
-//		usart_tx_uint(&USART2, PWM_val);
+//		PWM_val = usart_rx_uint(usart2);
+//		usart_tx_str(usart2, "Received:");
+//		usart_tx_uint(usart2, PWM_val);
 //	    gpiob_pwm_write(0, PWM_val);
 //		tim2_delay(1000);
 
-//		ec200u_mqtt_receive(&USART1, topic, message);
+//		ec200u_mqtt_receive(usart1, topic, message);
 //
 //		if (strcmp(message, "LEDON") == 0)
 //		{
 //			gpioa_digitalWrite(5, HIGH);
-//			usart_tx_str(&USART2, "LED IS ON\r\n");
+//			usart_tx_str(usart2, "LED IS ON\r\n");
 //		}
 //		else if (strcmp(message, "LEDOFF") == 0)
 //		{
 //			gpioa_digitalWrite(5, LOW);
-//			usart_tx_str(&USART2, "LED IS OFF\r\n");
+//			usart_tx_str(usart2, "LED IS OFF\r\n");
 //		}
 
 //************************GSM***********************//
@@ -225,19 +225,19 @@ int main(void)
 		char ch;
 
 //		/* PC -> GSM */
-		if(usart_available(&USART2))
+		if(usart_available(usart2))
 		{
-		    ch = usart_rx_ch(&USART2);
+		    ch = usart_rx_ch(usart2);
 
-		    usart_tx_ch(&USART1, ch);
+		    usart_tx_ch(usart1, ch);
 		}
 
 		/* GSM -> PC */
-		if(usart_available(&USART1))
+		if(usart_available(usart1))
 		{
-		    ch = usart_rx_ch(&USART1);
+		    ch = usart_rx_ch(usart1);
 
-		    usart_tx_ch(&USART2, ch);
+		    usart_tx_ch(usart2, ch);
 		}
 	}
 }

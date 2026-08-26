@@ -203,7 +203,9 @@ typedef struct {
 } USART_Handle_t;
 
 extern USART_Handle_t USART1;
+extern USART_Handle_t *usart1;
 extern USART_Handle_t USART2;
+extern USART_Handle_t *usart2;
 
 #define mqtt_broker 	  "broker.hivemq.com"
 #define mqtt_port 		   1883
