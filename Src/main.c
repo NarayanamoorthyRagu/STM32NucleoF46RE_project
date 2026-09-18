@@ -57,30 +57,30 @@ int main(void)
 	//uint8_t led_status = 1;
 	//ec200u_test_with_mqtt();
 
-	usart_tx_str(usart2,"\r\nSTM32 EC200U STARTING...\r\n");
-
-
-	if (!ec200u_init(usart1))
-	{
-		usart_tx_str(usart2, "\r\nEC200U INIT FAILED\r\n");
-	}
-
-	usart_tx_str(usart2, "\r\nEC200U INIT SUCCESS\r\n");
-
-
-	/* * First MQTT connection */
-
-	while (!ec200u_mqtt_init(usart1))
-	{
-		usart_tx_str(usart2,	"\r\nMQTT CONNECTION FAILED\r\n");
-
-	    usart_tx_str(usart2,	"Retrying MQTT...\r\n");
-
-	    tim2_delay(5000);
-
-	}
-
-	usart_tx_str(usart2, "\r\nMQTT INIT SUCCESS\r\n");
+//	usart_tx_str(usart2,"\r\nSTM32 EC200U STARTING...\r\n");
+//
+//
+//	if (!ec200u_init(usart1))
+//	{
+//		usart_tx_str(usart2, "\r\nEC200U INIT FAILED\r\n");
+//	}
+//
+//	usart_tx_str(usart2, "\r\nEC200U INIT SUCCESS\r\n");
+//
+//
+//	/* * First MQTT connection */
+//
+//	while (!ec200u_mqtt_init(usart1))
+//	{
+//		usart_tx_str(usart2,	"\r\nMQTT CONNECTION FAILED\r\n");
+//
+//	    usart_tx_str(usart2,	"Retrying MQTT...\r\n");
+//
+//	    tim2_delay(5000);
+//
+//	}
+//
+//	usart_tx_str(usart2, "\r\nMQTT INIT SUCCESS\r\n");
 
 //	char topic[128];
 //	char message[256];
@@ -165,27 +165,33 @@ int main(void)
 
 //**********Read input pin*********************//
 
-	    uint8_t current_status = gpioc_digitalRead(13);
-	    if (current_status != prev_status)
-	    {
-	        if (!current_status)
-	        {
-	        	usart_tx_uint(usart2, current_status);
-	        	gpioa_digitalWrite(5, led_status);
-	        	char output[32];
-	        	snprintf(output,sizeof(output),"{\"Button status\":\"%u\"}", (bool)led_status);
-	        	ec200u_mqtt_publish(usart1, mqtt_pub_topic, output, 0U, false);
-	            (led_status) ? usart_tx_str(usart2, "LED IS ON"):usart_tx_str(usart2, "LED IS OFF");
-	            led_status = !led_status;
-	            tim2_delay(100);
-	        }
-	        prev_status = current_status;
-	    }
+//	    uint8_t current_status = gpioc_digitalRead(13);
+//	    if (current_status != prev_status)
+//	    {
+//	        if (!current_status)
+//	        {
+//	        	usart_tx_uint(usart2, current_status);
+//	        	gpioa_digitalWrite(5, led_status);
+//	        	char output[32];
+//	        	snprintf(output,sizeof(output),"{\"Button status\":\"%u\"}", (bool)led_status);
+//	        	ec200u_mqtt_publish(usart1, mqtt_pub_topic, output, 0U, false);
+//	            (led_status) ? usart_tx_str(usart2, "LED IS ON"):usart_tx_str(usart2, "LED IS OFF");
+//	            led_status = !led_status;
+//	            tim2_delay(100);
+//	        }
+//	        prev_status = current_status;
+//	    }
 
 //*********Read analog pin using ADC1**********//
 
-//		uint16_t sensor_data = adc_read();
-//		usart_tx_uint(usart2, sensor_data);
+		uint16_t sensor_data = adc_read();
+
+		float voltage;
+
+		voltage = ((float)sensor_data * 3.3f) / 4095.0f;
+
+		usart_tx_uint(usart2, sensor_data);
+		usart_tx_uint(usart2, voltage);
 //		if(sensor_data > 3000){
 //			gpioa_digitalWrite(5, HIGH);
 //		}
@@ -196,7 +202,7 @@ int main(void)
 //			gpioa_digitalWrite(5, LOW);
 //			gpioa_digitalWrite(6, LOW);
 //		}
-//		tim2_delay(1000);
+		tim2_delay(1000);
 
 //******Write pwm value***********************//
 
@@ -222,22 +228,22 @@ int main(void)
 //************************GSM***********************//
 
 		// PC -> GSM
-		char ch;
-
-//		/* PC -> GSM */
-		if(usart_available(usart2))
-		{
-		    ch = usart_rx_ch(usart2);
-
-		    usart_tx_ch(usart1, ch);
-		}
-
-		/* GSM -> PC */
-		if(usart_available(usart1))
-		{
-		    ch = usart_rx_ch(usart1);
-
-		    usart_tx_ch(usart2, ch);
-		}
+//		char ch;
+//
+////		/* PC -> GSM */
+//		if(usart_available(usart2))
+//		{
+//		    ch = usart_rx_ch(usart2);
+//
+//		    usart_tx_ch(usart1, ch);
+//		}
+//
+//		/* GSM -> PC */
+//		if(usart_available(usart1))
+//		{
+//		    ch = usart_rx_ch(usart1);
+//
+//		    usart_tx_ch(usart2, ch);
+//		}
 	}
 }
